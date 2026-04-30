@@ -2,13 +2,18 @@ import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 
 import "./index.css"
-import App from "./App.tsx"
-import { ThemeProvider } from "@/components/theme-provider.tsx"
+import Dashboard from "./Admin-Dashboard"
+import Login from "./Login"
+import POS from "./POS"
+import { ThemeProvider } from "@/components/theme-provider"
+import { TooltipProvider } from "@/components/ui/tooltip"
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ThemeProvider>
-      <App />
+    <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+      <TooltipProvider>
+        <Dashboard />
+      </TooltipProvider>
     </ThemeProvider>
   </StrictMode>
 )

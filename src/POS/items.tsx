@@ -6,12 +6,14 @@ interface ProductGridProps {
   products: Product[];
   onAddToCart: (product: Product) => void;
   onDeleteProduct: (id: number, name: string) => void;
+  selectedProductId: number | null;
   onAddNewClick: () => void;
 }
 
 export function ProductGrid({
   products,
   onAddToCart,
+  selectedProductId,
   onDeleteProduct,
   onAddNewClick,
 }: ProductGridProps) {
@@ -21,7 +23,12 @@ export function ProductGrid({
         <div
           key={product.id}
           onClick={() => onAddToCart(product)}
-          className="group relative aspect-square rounded-xl overflow-hidden cursor-pointer shadow-sm border border-border/50"
+          // We use backticks ` ` here to allow the dynamic ${} logic
+          className={`group relative aspect-square rounded-xl overflow-hidden cursor-pointer shadow-sm transition-all duration-150 border-2 ${
+            selectedProductId === product.id 
+              ? "border-primary scale-95 opacity-80 z-10" 
+              : "border-border/50 hover:border-primary/50"
+          }`}
         >
           <img
             src={product.image}

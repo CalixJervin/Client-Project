@@ -601,14 +601,6 @@
     "target": "21",
     "limit": "24",
     "reviewer": "Jamik Tashpulatov"
-  },
-  {
-    "id": 68,
-    "header": "Service Level Agreements",
-    "type": "Legal",
-    "status": "Done",
-    "target": "26",
-    "limit": "29",
-    "reviewer": "Assign reviewer"
   }
+  
 ]

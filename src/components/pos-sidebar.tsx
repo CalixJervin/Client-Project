@@ -4,13 +4,15 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarGroup,
   SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
   SidebarRail,
   SidebarSeparator,
 } from "@/components/ui/sidebar"
-import { PlusIcon } from "lucide-react"
-
-import { Button } from "./ui/button"
+import { Link } from "react-router-dom"
 
 // This is sample data.
 const data = {
@@ -29,11 +31,35 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarSeparator className="mx-0" />
+        <SidebarGroup>
+          <SidebarMenu>
+            
+            {/* FIXED: SidebarMenuButton now directly wraps the Link */}
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <Link to="/">
+                  <span>POS</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            
+            {/* Keeping your rail/separator if you want it between items */}
+            <SidebarRail />
+            
+            {/* FIXED: SidebarMenuButton now directly wraps the Link */}
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <Link to="/menuManagement">
+                  <span>Edit Menu</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+
+          </SidebarMenu>
+        </SidebarGroup>
       </SidebarContent>
 
-
-        <SidebarFooter className="border-t border-sidebar-border"></SidebarFooter>
+      <SidebarFooter className="border-t border-sidebar-border"></SidebarFooter>
       <SidebarRail />
     </Sidebar>
   )

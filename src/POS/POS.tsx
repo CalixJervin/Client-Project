@@ -14,8 +14,8 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Input } from "@/components/ui/input"
-import { Plus, Search, X } from "lucide-react" // ADDED: Search and X icons
-import { Button } from "@/components/ui/button" // ADDED: Button import
+import { Plus, Search, X, ShoppingBag } from "lucide-react" // ADDED: ShoppingBag icon
+import { Button } from "@/components/ui/button" 
 import { mockProducts as initialProducts } from "@/POS/products"
 import type { Product } from "@/hooks/useCart"
 import { Toaster } from "@/components/ui/sonner"
@@ -39,7 +39,6 @@ export default function Page() {
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   
-  // NEW: State to track if mobile search is expanded
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false)
 
   const handleProductAdded = (newProduct: Product) => {
@@ -84,7 +83,6 @@ export default function Page() {
     addToCart(product);
     setSelectedProductId(product.id);
     
-    // Optional: Reset the selection after a short delay
     setTimeout(() => {
       setSelectedProductId(null);
     }, 150); 
@@ -94,38 +92,44 @@ export default function Page() {
     <div className="flex flex-row h-full">
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         
-        {/* REPLACED HEADER: Now supports mobile expanding search! */}
         <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b bg-background px-4">
           
-          {/* LEFT SIDE (Sidebar Trigger & Ticket Breadcrumb) */}
+          {/* LEFT SIDE (Sidebar Trigger & Ticket Header) */}
           <div className={`items-center gap-2 ${isMobileSearchOpen ? "hidden md:flex" : "flex"}`}>
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
-            <div 
-              className="cursor-pointer lg:cursor-default flex items-center"
-              onClick={() => setIsMobileTicketOpen(true)}
-            >
+            
+            {/* DESKTOP VIEW: Plain Text Breadcrumb */}
+            <div className="hidden lg:block">
               <Breadcrumb>
                 <BreadcrumbList>
                   <BreadcrumbItem>
-                    <BreadcrumbPage className="flex items-center gap-2">
-                      Ticket 
-                      {totalCartItems > 0 && (
-                        <span className="lg:hidden bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full">
-                          {totalCartItems}
-                        </span>
-                      )}
-                    </BreadcrumbPage>
+                    <BreadcrumbPage>Ticket</BreadcrumbPage>
                   </BreadcrumbItem>
                 </BreadcrumbList>
               </Breadcrumb>
             </div>
+
+            {/* MOBILE VIEW: Highly visible clickable button */}
+            <Button 
+              variant="secondary"
+              size="sm"
+              className="flex lg:hidden items-center gap-2 rounded-full border shadow-sm px-4"
+              onClick={() => setIsMobileTicketOpen(true)}
+            >
+              <ShoppingBag className="h-4 w-4" />
+              <span className="font-semibold">Ticket</span>
+              {totalCartItems > 0 && (
+                <span className="bg-primary text-primary-foreground text-xs font-bold h-5 w-5 flex items-center justify-center rounded-full ml-1">
+                  {totalCartItems}
+                </span>
+              )}
+            </Button>
           </div>
 
           {/* RIGHT SIDE (Search Bar & Icons) */}
           <div className={`flex items-center ${isMobileSearchOpen ? "w-full md:w-auto" : "ml-auto pl-4"}`}>
             
-            {/* Mobile View: Show Magnifying Glass when closed */}
             {!isMobileSearchOpen && (
               <Button 
                 variant="ghost" 
@@ -137,7 +141,6 @@ export default function Page() {
               </Button>
             )}
 
-            {/* The Search Input: Visible on desktop, or visible on mobile when 'opened' */}
             <div className={`${isMobileSearchOpen ? "flex w-full animate-in fade-in slide-in-from-right-4" : "hidden md:flex"} items-center gap-2 ml-auto`}>
               <Input 
                 type="search" 
@@ -148,7 +151,6 @@ export default function Page() {
                 autoFocus={isMobileSearchOpen}
               />
               
-              {/* Mobile View: Show 'X' button to close search */}
               {isMobileSearchOpen && (
                 <Button 
                   variant="ghost" 
@@ -174,7 +176,7 @@ export default function Page() {
                 onClick={() => setActiveCategory(cat)}
                 className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors cursor-pointer ${
                   activeCategory === cat
-                    ? "bg-foreground text-background" // Uses the absolute darkest theme color (black in light mode)
+                    ? "bg-foreground text-background" 
                     : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
                 }`}
               >
@@ -228,6 +230,7 @@ export default function Page() {
               subtotal={subtotal}
               tax={tax}
               total={total}
+              onClose={() => setIsMobileTicketOpen(false)}
             />
           </div>
         </div>

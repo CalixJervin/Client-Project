@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Trash2, Minus } from "lucide-react";
+import { Plus, Trash2, Minus, X } from "lucide-react"; // ADDED: X icon
 import type { CartItem } from "@/hooks/useCart";
 import {
   Dialog,
@@ -21,6 +21,7 @@ interface TicketSidebarProps {
   subtotal: number;
   tax: number;
   total: number;
+  onClose?: () => void; // ADDED: Optional onClose prop
 }
 
 export function TicketSidebar({
@@ -30,17 +31,16 @@ export function TicketSidebar({
   clearCart,
   subtotal,
   tax,
-  total
+  total,
+  onClose // ADDED: Destructure onClose
 }: TicketSidebarProps) {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [amountReceived, setAmountReceived] = useState<number | "">("");
   
-  // NEW: State to track selected payment method
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "gcash">("cash");
 
   const change = typeof amountReceived === "number" ? amountReceived - total : 0;
   
-  // UPDATED: Logic checks method. GCash is always exact (true), Cash requires enough money entered.
   const isSufficient = paymentMethod === "gcash" ? true : (typeof amountReceived === "number" && amountReceived >= total);
 
   const handleCompleteTransaction = () => {
@@ -48,19 +48,36 @@ export function TicketSidebar({
       clearCart();
       setIsCheckoutOpen(false);
       setAmountReceived("");
-      setPaymentMethod("cash"); // Reset back to cash for the next customer
+      setPaymentMethod("cash"); 
+      if (onClose) onClose(); // NEW: Automatically close ticket on mobile after checkout!
     }
   };
 
   return (
     <div className="w-full sm:w-[350px] border-l bg-background flex flex-col h-full shadow-xl z-10 shrink-0">
+      
+      {/* UPDATED HEADER: Added the Mobile Close Button */}
       <div className="flex items-center justify-between p-4 border-b shrink-0 h-16">
-        <h2 className="font-semibold text-lg">Current Order</h2>
+        <div className="flex items-center gap-2">
+          {/* Only shows on mobile screens when onClose is provided */}
+          {onClose && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="lg:hidden h-8 w-8 -ml-2 text-muted-foreground hover:text-foreground cursor-pointer" 
+              onClick={onClose}
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          )}
+          <h2 className="font-semibold text-lg">Current Order</h2>
+        </div>
+
         <Button 
           variant="ghost" 
           size="sm" 
           onClick={clearCart}
-          className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+          className="text-destructive hover:text-destructive/90 hover:bg-destructive/10 cursor-pointer"
         >
           Clear
         </Button>
@@ -87,7 +104,7 @@ export function TicketSidebar({
                     variant="ghost" 
                     size="icon" 
                     onClick={() => updateQty(item.id, -1)}
-                    className="h-8 w-8 rounded-none"
+                    className="h-8 w-8 rounded-none cursor-pointer"
                   >
                     <Minus className="h-3 w-3" />
                   </Button>
@@ -96,7 +113,7 @@ export function TicketSidebar({
                     variant="ghost" 
                     size="icon" 
                     onClick={() => updateQty(item.id, 1)}
-                    className="h-8 w-8 rounded-none"
+                    className="h-8 w-8 rounded-none cursor-pointer"
                   >
                     <Plus className="h-3 w-3" />
                   </Button>
@@ -105,7 +122,7 @@ export function TicketSidebar({
                   variant="ghost" 
                   size="icon" 
                   onClick={() => removeFromCart(item.id)}
-                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                  className="h-8 w-8 text-muted-foreground hover:text-destructive cursor-pointer"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -124,7 +141,7 @@ export function TicketSidebar({
         </div>
         <div>
           <Button 
-            className="w-full font-bold text-lg h-12"
+            className="w-full font-bold text-lg h-12 cursor-pointer"
             onClick={() => setIsCheckoutOpen(true)}
             disabled={cart.length === 0}
           >
@@ -145,28 +162,26 @@ export function TicketSidebar({
               <span>₱{total.toFixed(2)}</span>
             </div>
 
-            {/* NEW: Payment Method Selection */}
             <div className="flex flex-col gap-3">
               <label className="text-sm font-medium">Payment Method</label>
               <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-lg">
                 <Button
                   variant="ghost"
                   onClick={() => setPaymentMethod("cash")}
-                  className={`rounded-md ${paymentMethod === "cash" ? "bg-background shadow-sm hover:bg-background" : "text-muted-foreground hover:text-foreground"}`}
+                  className={`rounded-md cursor-pointer ${paymentMethod === "cash" ? "bg-background shadow-sm hover:bg-background" : "text-muted-foreground hover:text-foreground"}`}
                 >
                   Cash
                 </Button>
                 <Button
                   variant="ghost"
                   onClick={() => setPaymentMethod("gcash")}
-                  className={`rounded-md ${paymentMethod === "gcash" ? "bg-[#007DFE] text-white hover:bg-[#007DFE]/90 shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                  className={`rounded-md cursor-pointer ${paymentMethod === "gcash" ? "bg-[#007DFE] text-white hover:bg-[#007DFE]/90 shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
                 >
                   GCash
                 </Button>
               </div>
             </div>
             
-            {/* DYNAMIC CONTENT: Show inputs based on selected method */}
             {paymentMethod === "cash" ? (
               <motion.div 
                 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
@@ -204,6 +219,7 @@ export function TicketSidebar({
           </div>
           <DialogFooter className="sm:justify-end">
             <Button 
+              className="cursor-pointer"
               variant="outline" 
               onClick={() => {
                 setIsCheckoutOpen(false);
@@ -216,7 +232,7 @@ export function TicketSidebar({
             <Button 
               onClick={handleCompleteTransaction}
               disabled={!isSufficient}
-              className={paymentMethod === "gcash" ? "bg-[#007DFE] text-white hover:bg-[#007DFE]/90" : ""}
+              className={paymentMethod === "gcash" ? "bg-[#007DFE] text-white hover:bg-[#007DFE]/90 cursor-pointer" : "cursor-pointer"}
             >
               Confirm Payment
             </Button>

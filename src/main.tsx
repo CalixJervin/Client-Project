@@ -3,49 +3,55 @@ import { createRoot } from "react-dom/client"
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom"
 
 import "./index.css"
-// import Dashboard from "./Admin-Dashboard" // Keep this commented until you need it
-import Login from "./Login/Login" // Make sure this matches your actual file path/name!
+import Dashboard from "./Admin-Dashboard"
+import Login from "./Login/Login"
 import POS from "./POS/POS"
 import { ThemeProvider } from "@/components/theme-provider"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import ManageMenuPage from "./POS/menuManagement"
 import MainLayout from "@/mainLayout"
+import { AuthProvider, useAuth } from "@/hooks/use-auth"
 
 // --- SECURITY GUARD ---
-// This checks if someone is logged in. If not, it kicks them to the login screen.
 const ProtectedRoute = () => {
-  const currentUser = localStorage.getItem("currentUser")
+  const { user, isLocked } = useAuth()
   
-  // If there is no user in localStorage, redirect to /login
-  if (!currentUser) {
+  if (!user) {
     return <Navigate to="/login" replace />
   }
 
-  // If they are logged in, render the child routes (Outlet)
+  // If the session is locked, we still want to be on the page but maybe show an overlay
+  // However, the prompt says "Auto-lock after 5-10 minutes... (return to staff selection screen)"
+  // So if it's locked, we should probably redirect to login which will handle the "locked" state
+  if (isLocked) {
+    return <Navigate to="/login" replace />
+  }
+
   return <Outlet />
 }
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
-      <TooltipProvider>
-        <BrowserRouter>
-          <Routes>
-            
-            {/* PUBLIC ROUTE: The Login page sits OUTSIDE the MainLayout so it has no sidebar */}
-            <Route path="/login" element={<Login />} />
+    <AuthProvider>
+      <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+        <TooltipProvider>
+          <BrowserRouter>
+            <Routes>
+              
+              <Route path="/login" element={<Login />} />
 
-            {/* PROTECTED ROUTES: Everything inside here requires a PIN first */}
-            <Route element={<ProtectedRoute />}>
-              <Route element={<MainLayout />}>
-                <Route path="/" element={<POS />} />
-                <Route path="/menuManagement" element={<ManageMenuPage />} />
+              <Route element={<ProtectedRoute />}>
+                <Route element={<MainLayout />}>
+                  <Route path="/" element={<POS />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/menuManagement" element={<ManageMenuPage />} />
+                </Route>
               </Route>
-            </Route>
 
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </ThemeProvider>
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </ThemeProvider>
+    </AuthProvider>
   </StrictMode>
 )

@@ -7,10 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
-import { Separator } from "@/components/ui/separator"
-import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Toaster, toast } from "sonner"
 import { motion, AnimatePresence } from "framer-motion"
+import { SiteHeader } from "@/components/site-header"
 
 // Import your Modals and Types
 import { mockProducts } from "@/POS/products" 
@@ -31,7 +30,7 @@ export default function ManageMenuPage() {
   const [selectedProductIds, setSelectedProductIds] = useState<number[]>([])
   const [selectedCategoryNames, setSelectedCategoryNames] = useState<string[]>([])
 
-  // NEW: Ref to track the long-press timer
+  // Ref to track the long-press timer
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // --- MODAL STATES ---
@@ -63,7 +62,7 @@ export default function ManageMenuPage() {
     setSelectedCategoryNames(checked ? categories : [])
   }
 
-  // NEW: Long Press Handlers
+  // Long Press Handlers
   const cancelPressTimer = () => {
     if (pressTimer.current) {
       clearTimeout(pressTimer.current)
@@ -156,11 +155,10 @@ export default function ManageMenuPage() {
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-background relative">
       
-      <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b bg-background px-4">
-        <div className={`items-center gap-2 ${isMobileSearchOpen ? "hidden md:flex" : "flex"}`}>
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
-          <Breadcrumb>
+      <SiteHeader>
+        {/* --- LEFT SIDE: Breadcrumbs --- */}
+        <div className="flex items-center gap-2">
+          <Breadcrumb className="hidden sm:block">
             <BreadcrumbList>
               <BreadcrumbItem>
                 <BreadcrumbLink asChild><Link to="/">POS</Link></BreadcrumbLink>
@@ -173,26 +171,34 @@ export default function ManageMenuPage() {
           </Breadcrumb>
         </div>
 
-        <div className={`flex items-center ${isMobileSearchOpen ? "w-full md:w-auto" : "ml-auto pl-4"}`}>
+        {/* --- RIGHT SIDE: Search Bar --- */}
+        <div className={`flex items-center ${isMobileSearchOpen ? "w-full md:w-auto" : "ml-auto"}`}>
           {!isMobileSearchOpen && (
-            <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsMobileSearchOpen(true)}>
-              <Search className="h-5 w-5 text-muted-foreground" />
+            <Button variant="ghost" size="icon" className="md:hidden h-8 w-8 cursor-pointer" onClick={() => setIsMobileSearchOpen(true)}>
+              <Search className="h-4 w-4 text-muted-foreground" />
             </Button>
           )}
 
-          <div className={`${isMobileSearchOpen ? "flex w-full animate-in fade-in slide-in-from-right-4" : "hidden md:flex"} items-center gap-2 ml-auto`}>
-            <Input 
-              type="search" placeholder="Search items..." className="h-8 md:h-9 bg-muted w-full md:w-[200px] lg:w-[250px]" 
-              value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} autoFocus={isMobileSearchOpen}
-            />
+          <div className={`${isMobileSearchOpen ? "flex fixed inset-x-0 top-0 z-50 bg-background h-16 items-center px-4" : "hidden md:flex"} items-center gap-2`}>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input 
+                type="search" 
+                placeholder="Search items..." 
+                className="h-9 bg-muted w-full md:w-[200px] lg:w-[250px] pl-9 rounded-full border-border/50" 
+                value={searchQuery} 
+                onChange={(e) => setSearchQuery(e.target.value)} 
+                autoFocus={isMobileSearchOpen}
+              />
+            </div>
             {isMobileSearchOpen && (
-              <Button variant="ghost" size="icon" className="md:hidden shrink-0" onClick={() => { setIsMobileSearchOpen(false); setSearchQuery(""); }}>
+              <Button variant="ghost" size="icon" className="md:hidden shrink-0 cursor-pointer" onClick={() => { setIsMobileSearchOpen(false); setSearchQuery(""); }}>
                 <X className="h-5 w-5 text-muted-foreground" />
               </Button>
             )}
           </div>
         </div>
-      </header>
+      </SiteHeader>
 
       <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-24"> 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-6xl mx-auto">
@@ -209,7 +215,7 @@ export default function ManageMenuPage() {
               <div className="flex justify-center px-1 sm:px-0">
                 <Button 
                   onClick={() => setIsAddProductOpen(true)} 
-                  className="w-[95%] sm:w-[70%] max-w-[220px] rounded-full bg-foreground text-background hover:bg-foreground/80 shadow-md font-semibold whitespace-nowrap"
+                  className="w-[95%] sm:w-[70%] max-w-[220px] rounded-full bg-foreground text-background hover:bg-foreground/80 shadow-md font-semibold whitespace-nowrap cursor-pointer"
                 >
                   <Plus className="mr-1 sm:mr-2 h-4 w-4 shrink-0" /> Add Product
                 </Button>
@@ -221,8 +227,8 @@ export default function ManageMenuPage() {
               <Table>
                 <TableHeader className="bg-muted/50">
                   <TableRow>
-                    {/* CHANGED: Hidden on mobile unless selection mode is active */}
-                    <TableHead className={`w-[40px] text-center transition-all ${selectedProductIds.length > 0 ? "table-cell" : "hidden md:table-cell"}`}>
+                    {/* Hidden completely on desktop (md:hidden) */}
+                    <TableHead className={`w-[40px] text-center transition-all md:hidden ${selectedProductIds.length > 0 ? "table-cell" : "hidden"}`}>
                       <input 
                         type="checkbox" 
                         className="accent-primary h-4 w-4 rounded cursor-pointer"
@@ -243,32 +249,29 @@ export default function ManageMenuPage() {
                       key={product.id} 
                       className={`transition-colors cursor-pointer md:cursor-default ${selectedProductIds.includes(product.id) ? "bg-muted/30" : ""}`}
                       
-                      // NEW: Touch Handlers for Long Press
                       onTouchStart={() => {
                         if (selectedProductIds.length === 0) {
                           pressTimer.current = setTimeout(() => {
                             toggleProduct(product.id)
-                            // Optional: Small haptic vibration to confirm hold
                             if (window.navigator?.vibrate) window.navigator.vibrate(50)
-                          }, 450) // 450ms hold time
+                          }, 450)
                         }
                       }}
                       onTouchEnd={cancelPressTimer}
                       onTouchMove={cancelPressTimer}
                       
-                      // NEW: Standard click selection once mode is active
                       onClick={() => {
                         if (selectedProductIds.length > 0) toggleProduct(product.id)
                       }}
                     >
-                      {/* CHANGED: Hidden on mobile unless selection mode is active */}
-                      <TableCell className={`text-center transition-all ${selectedProductIds.length > 0 ? "table-cell" : "hidden md:table-cell"}`}>
+                      {/* Hidden completely on desktop (md:hidden) */}
+                      <TableCell className={`text-center transition-all md:hidden ${selectedProductIds.length > 0 ? "table-cell" : "hidden"}`}>
                         <input 
                           type="checkbox" 
                           className="accent-primary h-4 w-4 rounded cursor-pointer"
                           checked={selectedProductIds.includes(product.id)}
                           onChange={() => toggleProduct(product.id)}
-                          onClick={(e) => e.stopPropagation()} // Prevents double-toggling
+                          onClick={(e) => e.stopPropagation()} 
                         />
                       </TableCell>
                       <TableCell>
@@ -281,8 +284,8 @@ export default function ManageMenuPage() {
                       <TableCell className="text-right font-medium">₱{product.price.toFixed(2)}</TableCell>
                       <TableCell className="text-right hidden md:table-cell">
                         <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setSelectedProduct(product); setIsEditProductOpen(true); }}><Edit className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" className="hover:text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); setSelectedProduct(product); setIsDeleteProductOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="cursor-pointer" onClick={(e) => { e.stopPropagation(); setSelectedProduct(product); setIsEditProductOpen(true); }}><Edit className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="hover:text-destructive hover:bg-destructive/10 cursor-pointer" onClick={(e) => { e.stopPropagation(); setSelectedProduct(product); setIsDeleteProductOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -300,7 +303,7 @@ export default function ManageMenuPage() {
               <div className="flex justify-center px-1 sm:px-0">
                 <Button 
                   onClick={() => setIsAddCategoryOpen(true)} 
-                  className="w-[95%] sm:w-[70%] max-w-[220px] rounded-full bg-foreground text-background hover:bg-foreground/80 shadow-md font-semibold whitespace-nowrap"
+                  className="w-[95%] sm:w-[70%] max-w-[220px] rounded-full bg-foreground text-background hover:bg-foreground/80 shadow-md font-semibold whitespace-nowrap cursor-pointer"
                 >
                   <Plus className="mr-1 sm:mr-2 h-4 w-4 shrink-0" /> Add Category
                 </Button>
@@ -311,8 +314,8 @@ export default function ManageMenuPage() {
               <Table>
                 <TableHeader className="bg-muted/50">
                   <TableRow>
-                    {/* CHANGED: Hidden on mobile unless selection mode is active */}
-                    <TableHead className={`w-[40px] text-center transition-all ${selectedCategoryNames.length > 0 ? "table-cell" : "hidden md:table-cell"}`}>
+                    {/* Hidden completely on desktop (md:hidden) */}
+                    <TableHead className={`w-[40px] text-center transition-all md:hidden ${selectedCategoryNames.length > 0 ? "table-cell" : "hidden"}`}>
                       <input 
                         type="checkbox" 
                         className="accent-primary h-4 w-4 rounded cursor-pointer"
@@ -333,7 +336,6 @@ export default function ManageMenuPage() {
                         key={category} 
                         className={`transition-colors cursor-pointer md:cursor-default ${selectedCategoryNames.includes(category) ? "bg-muted/30" : ""}`}
                         
-                        // NEW: Touch Handlers for Long Press
                         onTouchStart={() => {
                           if (selectedCategoryNames.length === 0) {
                             pressTimer.current = setTimeout(() => {
@@ -345,13 +347,12 @@ export default function ManageMenuPage() {
                         onTouchEnd={cancelPressTimer}
                         onTouchMove={cancelPressTimer}
                         
-                        // NEW: Standard click selection once mode is active
                         onClick={() => {
                           if (selectedCategoryNames.length > 0) toggleCategory(category)
                         }}
                       >
-                        {/* CHANGED: Hidden on mobile unless selection mode is active */}
-                        <TableCell className={`text-center transition-all ${selectedCategoryNames.length > 0 ? "table-cell" : "hidden md:table-cell"}`}>
+                        {/* Hidden completely on desktop (md:hidden) */}
+                        <TableCell className={`text-center transition-all md:hidden ${selectedCategoryNames.length > 0 ? "table-cell" : "hidden"}`}>
                           <input 
                             type="checkbox" 
                             className="accent-primary h-4 w-4 rounded cursor-pointer"
@@ -364,8 +365,8 @@ export default function ManageMenuPage() {
                         <TableCell className="text-right text-muted-foreground">{itemCount} items</TableCell>
                         <TableCell className="text-right hidden md:table-cell">
                           <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setSelectedCategory(category); setNewCategoryName(category); setIsEditCategoryOpen(true); }}><Edit className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon" className="hover:text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); setSelectedCategory(category); setIsDeleteCategoryOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" className="cursor-pointer" onClick={(e) => { e.stopPropagation(); setSelectedCategory(category); setNewCategoryName(category); setIsEditCategoryOpen(true); }}><Edit className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" className="hover:text-destructive hover:bg-destructive/10 cursor-pointer" onClick={(e) => { e.stopPropagation(); setSelectedCategory(category); setIsDeleteCategoryOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -394,7 +395,7 @@ export default function ManageMenuPage() {
               </span>
               <button 
                 onClick={() => activeTab === "products" ? setSelectedProductIds([]) : setSelectedCategoryNames([])}
-                className="text-xs text-muted-foreground underline text-left"
+                className="text-xs text-muted-foreground underline text-left cursor-pointer"
               >
                 Clear Selection
               </button>
@@ -402,11 +403,11 @@ export default function ManageMenuPage() {
             
             <div className="flex gap-2">
               {(activeTab === "products" ? selectedProductIds.length === 1 : selectedCategoryNames.length === 1) && (
-                <Button variant="outline" onClick={handleBulkEdit}>
+                <Button variant="outline" className="cursor-pointer" onClick={handleBulkEdit}>
                   <Edit className="h-4 w-4 mr-2" /> Edit
                 </Button>
               )}
-              <Button variant="destructive" onClick={handleBulkDelete}>
+              <Button variant="destructive" className="cursor-pointer" onClick={handleBulkDelete}>
                 <Trash2 className="h-4 w-4 mr-2" /> Delete
               </Button>
             </div>

@@ -1,151 +1,113 @@
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import { Delete, ArrowLeft, ShieldAlert, Coffee, Clock, UserPlus, Trash2, Settings } from "lucide-react"
+import { Delete, ArrowLeft, ShieldAlert, Coffee, Clock, UserPlus, LogIn, LayoutDashboard, ShoppingCart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Toaster, toast } from "sonner"
 import { motion, AnimatePresence } from "framer-motion"
-import bcrypt from "bcryptjs"
-
-interface Staff {
-  id: string
-  name: string
-  role: "barista" | "admin"
-  avatarInitials: string
-}
-
-const MAX_ATTEMPTS = 5
-const LOCKOUT_DURATION_MS = 30 * 1000 
-const INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000 
-const SHIFT_DURATION_MS = 8 * 60 * 60 * 1000 
+import { useAuth } from "@/hooks/use-auth"
+import type { Staff } from "@/hooks/use-auth"
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const { 
+    user, 
+    staffList, 
+    isLocked, 
+    isInitialSetup, 
+    login, 
+    unlock, 
+    addStaff 
+  } = useAuth()
   
-  const [staffList, setStaffList] = useState<Staff[]>([])
-  const [view, setView] = useState<"select" | "pin" | "add">("select")
+  const [view, setView] = useState<"onboarding" | "select" | "pin" | "mode">("select")
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null)
-  const [isManaging, setIsManaging] = useState(false)
-  
   const [pin, setPin] = useState("")
-  const [failedAttempts, setFailedAttempts] = useState(0)
-  const [lockoutUntil, setLockoutUntil] = useState<number | null>(null)
+  const [isVerifying, setIsVerifying] = useState(false)
 
-  // Add Account State
-  const [newName, setNewName] = useState("")
-  const [newRole, setNewRole] = useState<"barista" | "admin">("barista")
-  const [newPin, setNewPin] = useState("")
+  // Onboarding State
+  const [adminName, setAdminName] = useState("")
+  const [adminPin, setAdminPin] = useState("")
+  const [confirmPin, setConfirmPin] = useState("")
 
-  const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // --- INITIALIZATION ---
   useEffect(() => {
-    const savedStaff = localStorage.getItem("timpla_staff")
-    if (!savedStaff) {
-      const defaultStaff: Staff[] = [
-        { id: "admin-1", name: "Maria", role: "admin", avatarInitials: "MA" },
-        { id: "barista-1", name: "David", role: "barista", avatarInitials: "DA" }
-      ]
-      localStorage.setItem("timpla_staff", JSON.stringify(defaultStaff))
-      
-      const salt = bcrypt.genSaltSync(10)
-      localStorage.setItem("admin-1_pin", bcrypt.hashSync("1234", salt))
-      localStorage.setItem("barista-1_pin", bcrypt.hashSync("1111", salt))
-      
-      setStaffList(defaultStaff)
+    if (isInitialSetup) {
+      setView("onboarding")
+    } else if (user && !isLocked) {
+      if (user.role === "admin") {
+        setView("mode")
+      } else {
+        navigate("/")
+      }
+    } else if (isLocked && user) {
+      setSelectedStaff(user)
+      setView("pin")
     } else {
-      setStaffList(JSON.parse(savedStaff))
+      setView("select")
     }
-
-    const savedLockout = localStorage.getItem("timpla_lockout")
-    if (savedLockout && parseInt(savedLockout) > Date.now()) {
-      setLockoutUntil(parseInt(savedLockout))
-    }
-  }, [])
-
-  // --- LOGIN & KEYBOARD LOGIC ---
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (view !== "pin" || lockoutUntil) return
-      if (e.key >= "0" && e.key <= "9") handleKeyPress(e.key)
-      else if (e.key === "Backspace") handleDelete()
-    }
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [view, pin, lockoutUntil])
+  }, [isInitialSetup, user, isLocked, navigate])
 
   const handleKeyPress = (num: string) => {
-    if (pin.length < 4 && !lockoutUntil) {
-      const newPinValue = pin + num;
-      setPin(newPinValue);
-      if (newPinValue.length === 4 && selectedStaff) verifyPin(newPinValue, selectedStaff);
+    if (pin.length < 6) {
+      setPin(prev => prev + num)
     }
   }
 
   const handleDelete = () => setPin(prev => prev.slice(0, -1))
 
-  const verifyPin = (enteredPin: string, staff: Staff) => {
-    const hashedPin = localStorage.getItem(`${staff.id}_pin`)
-    if (hashedPin && bcrypt.compareSync(enteredPin, hashedPin)) {
-      localStorage.setItem("currentUser", staff.id)
-      localStorage.setItem("timpla_session_expiry", (Date.now() + SHIFT_DURATION_MS).toString())
-      setFailedAttempts(0)
-      
-      const shiftStartKey = `${staff.id}_shift_start`
-      if (!localStorage.getItem(shiftStartKey)) {
-        const startTime = new Date().toLocaleString()
-        localStorage.setItem(shiftStartKey, startTime)
-        toast.success(`Shift started for ${staff.name}`)
-      } else {
-        toast.success(`Welcome back, ${staff.name}!`)
-      }
-      setTimeout(() => navigate("/"), 300)
-    } else {
-      const newAttempts = failedAttempts + 1
-      setFailedAttempts(newAttempts)
+  const handleLogin = async () => {
+    if (!selectedStaff || pin.length < 4) return
+    
+    setIsVerifying(true)
+    const result = isLocked && user?.id === selectedStaff.id 
+      ? await unlock(pin)
+      : await login(selectedStaff.id, pin)
+    
+    setIsVerifying(false)
+    
+    if (result.success) {
+      toast.success(result.message)
       setPin("")
-      if (newAttempts >= MAX_ATTEMPTS) {
-        const lockoutTime = Date.now() + LOCKOUT_DURATION_MS
-        setLockoutUntil(lockoutTime)
-        localStorage.setItem("timpla_lockout", lockoutTime.toString())
-        toast.error(`Locked for 30 seconds.`)
+      if (selectedStaff.role === "admin") {
+        setView("mode")
       } else {
-        toast.error(`Incorrect PIN. ${MAX_ATTEMPTS - newAttempts} attempts left.`)
+        navigate("/")
       }
+    } else {
+      toast.error(result.message)
+      setPin("")
     }
   }
 
-  // --- ACCOUNT MANAGEMENT ---
-  const handleCreateAccount = () => {
-    if (!newName.trim()) return toast.error("Name is required")
-    if (newPin.length !== 4) return toast.error("PIN must be 4 digits")
+  // Auto-submit when PIN length is sufficient (assuming 4-6 digits)
+  useEffect(() => {
+    if (pin.length >= 4 && selectedStaff && view === "pin" && !isVerifying) {
+      const timer = setTimeout(() => {
+        handleLogin()
+      }, 300)
+      return () => clearTimeout(timer)
+    }
+  }, [pin, selectedStaff, view, isVerifying])
 
-    const newId = `${newRole}-${Date.now()}`
-    const initials = newName.substring(0, 2).toUpperCase()
-    const newAccount: Staff = { id: newId, name: newName.trim(), role: newRole, avatarInitials: initials }
-    
-    const updatedStaff = [...staffList, newAccount]
-    localStorage.setItem("timpla_staff", JSON.stringify(updatedStaff))
-    
-    const salt = bcrypt.genSaltSync(10)
-    localStorage.setItem(`${newId}_pin`, bcrypt.hashSync(newPin, salt))
-    
-    setStaffList(updatedStaff)
-    toast.success(`${newName} added successfully!`)
-    
-    setNewName("")
-    setNewPin("")
-    setView("select")
-  }
+  const handleOnboarding = async () => {
+    if (!adminName.trim()) return toast.error("Please enter your name")
+    if (adminPin.length < 4) return toast.error("PIN must be at least 4 digits")
+    if (adminPin !== confirmPin) return toast.error("PINs do not match")
 
-  const handleDeleteAccount = (staffId: string, staffName: string) => {
-    if (window.confirm(`Are you sure you want to delete ${staffName}?`)) {
-      const updatedStaff = staffList.filter(s => s.id !== staffId)
-      localStorage.setItem("timpla_staff", JSON.stringify(updatedStaff))
-      localStorage.removeItem(`${staffId}_pin`)
-      setStaffList(updatedStaff)
-      toast.success(`${staffName} deleted.`)
-      if (updatedStaff.length === 0) setIsManaging(false)
+    const result = await addStaff({
+      name: adminName.trim(),
+      role: "admin",
+      avatarColor: "bg-primary"
+    }, adminPin)
+
+    if (result.success) {
+      toast.success("Admin account created! Please login.")
+      setAdminName("")
+      setAdminPin("")
+      setConfirmPin("")
+      setView("select")
+    } else {
+      toast.error(result.message)
     }
   }
 
@@ -161,67 +123,90 @@ export default function LoginPage() {
           <Clock className="h-6 w-6 text-muted-foreground opacity-50" />
         </div>
 
-        <div className="p-8 relative min-h-[480px] flex flex-col">
+        <div className="p-8 relative min-h-[520px] flex flex-col">
           <AnimatePresence mode="wait">
             
-            {/* VIEW 1: STAFF SELECTION */}
-            {view === "select" && (
-              <motion.div key="select" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col h-full flex-1">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-semibold">Who is working right now?</h2>
-                  {staffList.length > 0 && (
-                    <Button variant="ghost" size="sm" onClick={() => setIsManaging(!isManaging)} className={isManaging ? "text-destructive" : ""}>
-                      {isManaging ? "Done" : <Settings className="h-4 w-4" />}
-                    </Button>
-                  )}
+            {/* ONBOARDING */}
+            {view === "onboarding" && (
+              <motion.div key="onboarding" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="flex flex-col h-full flex-1 max-w-sm mx-auto w-full">
+                <div className="text-center mb-8">
+                  <h2 className="text-2xl font-bold">Welcome!</h2>
+                  <p className="text-muted-foreground">Let's set up your first Admin account.</p>
                 </div>
-                
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 auto-rows-fr">
-                  {staffList.map((staff) => (
-                    <div key={staff.id} className="relative">
-                      <button 
-                        onClick={() => {
-                          if (isManaging) handleDeleteAccount(staff.id, staff.name)
-                          else { setSelectedStaff(staff); setView("pin"); }
-                        }}
-                        className={`w-full flex flex-col items-center justify-center gap-4 p-6 rounded-2xl border-2 transition-all active:scale-95 ${isManaging ? "border-destructive/30 bg-destructive/5 hover:bg-destructive/10 animate-pulse" : "border-transparent bg-muted/50 hover:bg-muted hover:border-primary/20 shadow-sm"}`}
-                      >
-                        <div className={`h-16 w-16 rounded-full flex items-center justify-center text-xl font-bold shadow-sm ${isManaging ? "bg-destructive/20 text-destructive" : "bg-primary/10 text-primary"}`}>
-                          {isManaging ? <Trash2 className="h-6 w-6" /> : staff.avatarInitials}
-                        </div>
-                        <div className="text-center">
-                          <p className="font-semibold text-lg">{staff.name}</p>
-                          <p className="text-xs text-muted-foreground capitalize flex items-center justify-center gap-1 mt-1">
-                            {staff.role === 'admin' ? <ShieldAlert className="h-3 w-3" /> : <Coffee className="h-3 w-3" />}
-                            {staff.role}
-                          </p>
-                        </div>
-                      </button>
-                    </div>
-                  ))}
 
-                  {/* Add Account Button in Grid */}
-                  {!isManaging && (
-                    <button 
-                      onClick={() => setView("add")}
-                      className="flex flex-col items-center justify-center gap-4 p-6 rounded-2xl border-2 border-dashed border-muted-foreground/30 hover:border-primary hover:bg-primary/5 transition-all active:scale-95 text-muted-foreground hover:text-primary"
-                    >
-                      <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center text-xl shadow-sm">
-                        <UserPlus className="h-6 w-6" />
-                      </div>
-                      <p className="font-semibold text-lg">Add Account</p>
-                    </button>
-                  )}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Admin Name</label>
+                    <Input 
+                      placeholder="e.g. Maria" 
+                      value={adminName} 
+                      onChange={(e) => setAdminName(e.target.value)}
+                      className="h-12"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Create PIN (4-6 digits)</label>
+                    <Input 
+                      type="password" 
+                      inputMode="numeric"
+                      placeholder="••••" 
+                      value={adminPin} 
+                      onChange={(e) => setAdminPin(e.target.value.replace(/[^0-9]/g, ''))}
+                      className="h-12 text-center tracking-widest"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Confirm PIN</label>
+                    <Input 
+                      type="password" 
+                      inputMode="numeric"
+                      placeholder="••••" 
+                      value={confirmPin} 
+                      onChange={(e) => setConfirmPin(e.target.value.replace(/[^0-9]/g, ''))}
+                      className="h-12 text-center tracking-widest"
+                    />
+                  </div>
+                  <Button className="w-full h-14 text-lg mt-6" onClick={handleOnboarding}>
+                    Create Admin Account
+                  </Button>
                 </div>
               </motion.div>
             )}
 
-            {/* VIEW 2: PIN PAD */}
+            {/* STAFF SELECTION */}
+            {view === "select" && (
+              <motion.div key="select" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col h-full flex-1">
+                <h2 className="text-xl font-semibold mb-6">Who is working right now?</h2>
+                
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 auto-rows-fr">
+                  {staffList.map((staff) => (
+                    <button 
+                      key={staff.id}
+                      onClick={() => { setSelectedStaff(staff); setView("pin"); }}
+                      className="w-full flex flex-col items-center justify-center gap-4 p-6 rounded-2xl border-2 border-transparent bg-muted/50 hover:bg-muted hover:border-primary/20 shadow-sm transition-all active:scale-95"
+                    >
+                      <div className={`h-16 w-16 rounded-full flex items-center justify-center text-xl font-bold shadow-sm bg-primary/10 text-primary`}>
+                        {staff.avatarInitials}
+                      </div>
+                      <div className="text-center">
+                        <p className="font-semibold text-lg">{staff.name}</p>
+                        <p className="text-xs text-muted-foreground capitalize flex items-center justify-center gap-1 mt-1">
+                          {staff.role === 'admin' ? <ShieldAlert className="h-3 w-3" /> : <Coffee className="h-3 w-3" />}
+                          {staff.role}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* PIN PAD */}
             {view === "pin" && selectedStaff && (
               <motion.div key="pin-pad" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="flex flex-col items-center flex-1 max-w-sm mx-auto w-full">
                 <div className="w-full flex items-center justify-between mb-8">
-                  <Button variant="ghost" size="icon" className="rounded-full hover:bg-muted" onClick={() => { setView("select"); setPin(""); }}>
-                    <ArrowLeft className="h-5 w-5" />
+                  <Button variant="ghost" size="icon" className="rounded-full" onClick={() => { if (!isLocked) setView("select"); setPin(""); }}>
+                    {!isLocked && <ArrowLeft className="h-5 w-5" />}
                   </Button>
                   <div className="text-center">
                     <span className="font-semibold text-xl">Hi, {selectedStaff.name} 👋</span>
@@ -230,71 +215,62 @@ export default function LoginPage() {
                   <div className="w-10" />
                 </div>
 
-                {lockoutUntil ? (
-                  <div className="mb-8 p-3 bg-destructive/10 text-destructive rounded-lg text-sm font-medium animate-pulse text-center w-full">
-                    Account locked. Please wait 30 seconds.
-                  </div>
-                ) : (
-                  <div className="flex gap-4 mb-8">
-                    {[...Array(4)].map((_, i) => (
-                      <div key={i} className={`h-4 w-4 rounded-full transition-all duration-200 ${i < pin.length ? "bg-primary scale-110 shadow-sm" : "bg-muted-foreground/20"}`} />
-                    ))}
-                  </div>
-                )}
+                <div className="flex gap-4 mb-8">
+                  {[...Array(pin.length || 4)].map((_, i) => (
+                    <div key={i} className={`h-4 w-4 rounded-full transition-all duration-200 ${i < pin.length ? "bg-primary scale-110 shadow-sm" : "bg-muted-foreground/20"}`} />
+                  ))}
+                </div>
 
-                <div className="grid grid-cols-3 gap-4 w-full mt-auto">
+                <div className="grid grid-cols-3 gap-4 w-full">
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                    <Button key={num} variant="outline" disabled={!!lockoutUntil} onClick={() => handleKeyPress(num.toString())} className="h-20 text-3xl font-medium rounded-2xl bg-background hover:bg-muted/50 border-muted-foreground/10 shadow-sm active:scale-95 transition-all">
+                    <Button key={num} variant="outline" onClick={() => handleKeyPress(num.toString())} className="h-16 text-2xl font-medium rounded-2xl">
                       {num}
                     </Button>
                   ))}
                   <div />
-                  <Button variant="outline" disabled={!!lockoutUntil} onClick={() => handleKeyPress("0")} className="h-20 text-3xl font-medium rounded-2xl bg-background hover:bg-muted/50 border-muted-foreground/10 shadow-sm active:scale-95 transition-all">
+                  <Button variant="outline" onClick={() => handleKeyPress("0")} className="h-16 text-2xl font-medium rounded-2xl">
                     0
                   </Button>
-                  <Button variant="ghost" disabled={pin.length === 0 || !!lockoutUntil} onClick={handleDelete} className="h-20 rounded-2xl hover:bg-destructive/10 hover:text-destructive active:scale-95 transition-all">
-                    <Delete className="h-8 w-8" />
+                  <Button variant="ghost" onClick={handleDelete} className="h-16 rounded-2xl">
+                    <Delete className="h-6 w-6" />
                   </Button>
                 </div>
               </motion.div>
             )}
 
-            {/* VIEW 3: ADD NEW ACCOUNT */}
-            {view === "add" && (
-              <motion.div key="add-account" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="flex flex-col flex-1 max-w-sm mx-auto w-full">
-                <div className="w-full flex items-center justify-between mb-8">
-                  <Button variant="ghost" size="icon" className="rounded-full" onClick={() => { setView("select"); setNewName(""); setNewPin(""); }}>
-                    <ArrowLeft className="h-5 w-5" />
-                  </Button>
-                  <span className="font-semibold text-xl">New Account</span>
-                  <div className="w-10" />
+            {/* MODE SELECTION (ADMIN ONLY) */}
+            {view === "mode" && user && (
+              <motion.div key="mode" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="flex flex-col items-center justify-center flex-1 space-y-8">
+                <div className="text-center">
+                  <h2 className="text-2xl font-bold">Welcome back, {user.name}</h2>
+                  <p className="text-muted-foreground">Choose where you'd like to go</p>
                 </div>
 
-                <div className="flex flex-col gap-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Staff Name</label>
-                    <Input placeholder="e.g. Alex" value={newName} onChange={(e) => setNewName(e.target.value)} className="h-12 text-lg" />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Role</label>
-                    <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-lg">
-                      <Button variant="ghost" onClick={() => setNewRole("barista")} className={`rounded-md ${newRole === "barista" ? "bg-background shadow-sm" : "text-muted-foreground"}`}>Cashier</Button>
-                      <Button variant="ghost" onClick={() => setNewRole("admin")} className={`rounded-md ${newRole === "admin" ? "bg-background shadow-sm" : "text-muted-foreground"}`}>Admin</Button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-md">
+                  <button 
+                    onClick={() => navigate("/")}
+                    className="flex flex-col items-center gap-4 p-8 rounded-3xl bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all active:scale-95"
+                  >
+                    <div className="h-16 w-16 rounded-full bg-white/20 flex items-center justify-center">
+                      <ShoppingCart className="h-8 w-8" />
                     </div>
-                  </div>
+                    <span className="text-xl font-bold">Go to POS</span>
+                  </button>
 
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Create 4-Digit PIN</label>
-                    <Input type="password" inputMode="numeric" maxLength={4} placeholder="••••" value={newPin} onChange={(e) => setNewPin(e.target.value.replace(/[^0-9]/g, ''))} className="h-12 text-lg tracking-widest text-center" />
-                  </div>
+                  <button 
+                    onClick={() => navigate("/dashboard")}
+                    className="flex flex-col items-center gap-4 p-8 rounded-3xl bg-muted hover:bg-muted/80 border shadow-sm transition-all active:scale-95"
+                  >
+                    <div className="h-16 w-16 rounded-full bg-background flex items-center justify-center">
+                      <LayoutDashboard className="h-8 w-8" />
+                    </div>
+                    <span className="text-xl font-bold">Go to Dashboard</span>
+                  </button>
                 </div>
 
-                <div className="mt-auto pt-8">
-                  <Button className="w-full h-14 text-lg rounded-xl shadow-md" onClick={handleCreateAccount}>
-                    Save Account
-                  </Button>
-                </div>
+                <Button variant="ghost" onClick={() => { setView("select"); }} className="mt-4">
+                  Switch User
+                </Button>
               </motion.div>
             )}
 

@@ -5,20 +5,14 @@ import { AddProductModal } from "@/POS/addProduct"
 import DeleteProductModal from "@/POS/deleteProduct"
 import { AddCategoryModal } from "@/POS/addCategory"
 import { ProductGrid } from "@/POS/items"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-} from "@/components/ui/breadcrumb"
 import { Separator } from "@/components/ui/separator"
-import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Input } from "@/components/ui/input"
-import { Plus, Search, X, ShoppingBag } from "lucide-react" // ADDED: ShoppingBag icon
+import { Plus, Search, X, ShoppingBag } from "lucide-react"
 import { Button } from "@/components/ui/button" 
 import { mockProducts as initialProducts } from "@/POS/products"
 import type { Product } from "@/hooks/useCart"
 import { Toaster } from "@/components/ui/sonner"
+import { SiteHeader } from "@/components/site-header"
 
 export default function Page() {
   const { 
@@ -89,73 +83,64 @@ export default function Page() {
   };
     
   return (
-    <div className="flex flex-row h-full">
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
+    // 1. The main container is now a ROW first
+    <div className="flex flex-row h-full overflow-hidden w-full">
+      
+      {/* --- LEFT SIDE: Header + Main Content --- */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden relative">
         
-        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b bg-background px-4">
-          
-          {/* LEFT SIDE (Sidebar Trigger & Ticket Header) */}
-          <div className={`items-center gap-2 ${isMobileSearchOpen ? "hidden md:flex" : "flex"}`}>
-            <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
+        {/* SiteHeader is now constrained inside the Left panel */}
+        <SiteHeader>
+          <div className={`flex items-center gap-2 ${isMobileSearchOpen ? "hidden md:flex" : "flex"}`}>
+            <h1 className="text-base font-semibold hidden lg:block">POS</h1>
             
-            {/* DESKTOP VIEW: Plain Text Breadcrumb */}
-            <div className="hidden lg:block">
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <BreadcrumbItem>
-                    <BreadcrumbPage>Ticket</BreadcrumbPage>
-                  </BreadcrumbItem>
-                </BreadcrumbList>
-              </Breadcrumb>
-            </div>
-
-            {/* MOBILE VIEW: Highly visible clickable button */}
             <Button 
               variant="secondary"
               size="sm"
-              className="flex lg:hidden items-center gap-2 rounded-full border shadow-sm px-4"
+              className="flex lg:hidden items-center gap-2 rounded-full border shadow-sm px-3 h-8 cursor-pointer"
               onClick={() => setIsMobileTicketOpen(true)}
             >
-              <ShoppingBag className="h-4 w-4" />
-              <span className="font-semibold">Ticket</span>
+              <ShoppingBag className="h-3.5 w-3.5" />
+              <span className="font-bold text-xs">Ticket</span>
               {totalCartItems > 0 && (
-                <span className="bg-primary text-primary-foreground text-xs font-bold h-5 w-5 flex items-center justify-center rounded-full ml-1">
+                <span className="bg-primary text-primary-foreground text-[10px] font-bold h-4 w-4 flex items-center justify-center rounded-full ml-1">
                   {totalCartItems}
                 </span>
               )}
             </Button>
           </div>
 
-          {/* RIGHT SIDE (Search Bar & Icons) */}
-          <div className={`flex items-center ${isMobileSearchOpen ? "w-full md:w-auto" : "ml-auto pl-4"}`}>
-            
+          <div className={`flex items-center ${isMobileSearchOpen ? "w-full md:w-auto" : "ml-auto"}`}>
             {!isMobileSearchOpen && (
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="md:hidden"
+                className="md:hidden h-8 w-8 cursor-pointer"
                 onClick={() => setIsMobileSearchOpen(true)}
               >
-                <Search className="h-5 w-5 text-muted-foreground" />
+                <Search className="h-4 w-4 text-muted-foreground" />
               </Button>
             )}
 
-            <div className={`${isMobileSearchOpen ? "flex w-full animate-in fade-in slide-in-from-right-4" : "hidden md:flex"} items-center gap-2 ml-auto`}>
-              <Input 
-                type="search" 
-                placeholder="Search items..." 
-                className="h-8 md:h-9 bg-muted w-full md:w-[200px] lg:w-[250px]" 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                autoFocus={isMobileSearchOpen}
-              />
+            <div className={`${isMobileSearchOpen ? "flex w-full animate-in fade-in slide-in-from-right-4" : "hidden md:flex"} items-center gap-2`}>
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input 
+                  type="search" 
+                  placeholder="Search items..." 
+                  // Adding rounded-full to match your image exactly
+                  className="h-9 bg-muted w-full md:w-[200px] lg:w-[250px] pl-9 rounded-full border-border/50" 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  autoFocus={isMobileSearchOpen}
+                />
+              </div>
               
               {isMobileSearchOpen && (
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="md:hidden shrink-0"
+                  className="md:hidden shrink-0 cursor-pointer"
                   onClick={() => {
                     setIsMobileSearchOpen(false);
                     setSearchQuery("");
@@ -166,8 +151,9 @@ export default function Page() {
               )}
             </div>
           </div>
-        </header>
+        </SiteHeader>
 
+        {/* Scrollable Categories & Products Area */}
         <div className="flex-1 flex flex-col gap-4 p-4 overflow-y-auto">
           <div className="flex w-full overflow-x-auto pb-2 gap-2 scrollbar-hide shrink-0">
             {categories.map((cat) => (
@@ -203,7 +189,9 @@ export default function Page() {
         </div>
       </div>
 
-      <div className="hidden lg:block h-full">
+      {/* --- RIGHT SIDE: Ticket Sidebar --- */}
+      {/* 2. Moved to the top level flex-row, so it takes the FULL height */}
+      <div className="hidden lg:block h-full border-l shrink-0 z-10 bg-background">
         <TicketSidebar 
           cart={cart}
           updateQty={updateQty}
@@ -215,8 +203,9 @@ export default function Page() {
         />
       </div>
 
+      {/* --- MOBILE TICKET OVERLAY --- */}
       {isMobileTicketOpen && (
-        <div className="fixed inset-0 z-40 flex lg:hidden">
+        <div className="fixed inset-0 z-50 flex lg:hidden">
           <div 
             className="fixed inset-0 bg-black/60 transition-opacity" 
             onClick={() => setIsMobileTicketOpen(false)}
@@ -236,25 +225,10 @@ export default function Page() {
         </div>
       )}
 
-      <AddProductModal 
-        isOpen={isAddModalOpen} 
-        onOpenChange={setIsAddModalOpen}
-        onAddProduct={handleProductAdded}
-        categories={categories}
-      />
-      <DeleteProductModal 
-        isOpen={isDeleteModalOpen}
-        onOpenChange={setIsDeleteModalOpen}
-        onDeleteProduct={handleConfirmDelete}
-        product={productToDelete}
-      />
-      <AddCategoryModal 
-        isOpen={isAddCategoryOpen}
-        onOpenChange={setIsAddCategoryOpen}
-        onAddCategory={handleAddCategory}
-        existingProducts={products}
-        existingCategories={categories}
-      />
+      {/* MODALS */}
+      <AddProductModal isOpen={isAddModalOpen} onOpenChange={setIsAddModalOpen} onAddProduct={handleProductAdded} categories={categories} />
+      <DeleteProductModal isOpen={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen} onDeleteProduct={handleConfirmDelete} product={productToDelete} />
+      <AddCategoryModal isOpen={isAddCategoryOpen} onOpenChange={setIsAddCategoryOpen} onAddCategory={handleAddCategory} existingProducts={products} existingCategories={categories} />
 
       <Toaster richColors/>
     </div>

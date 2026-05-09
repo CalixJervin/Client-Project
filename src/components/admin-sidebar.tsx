@@ -3,7 +3,7 @@ import * as React from "react"
 import { NavDocuments } from "@/components/nav-documents"
 import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
-import { NavUser } from "@/components/nav-user"
+
 import {
   Sidebar,
   SidebarContent,
@@ -14,6 +14,26 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import { LayoutDashboardIcon, ListIcon, ChartBarIcon, FolderIcon, UsersIcon, CameraIcon, FileTextIcon, Settings2Icon, CircleHelpIcon, SearchIcon, DatabaseIcon, FileChartColumnIcon, FileIcon, CommandIcon } from "lucide-react"
+
+
+interface NavUserProps {
+  user: {
+    name: string;
+    email: string;
+    avatar: string;
+  };
+}
+
+export function NavUser({ user }: NavUserProps) {
+  return (
+    <div>
+      {/* Example usage inside your component */}
+      <img src={user.avatar} alt={user.name} />
+      <p>{user.name}</p>
+      <p>{user.email}</p>
+    </div>
+  );
+}
 
 const data = {
   user: {
@@ -40,6 +60,7 @@ const data = {
     },
     
   ],
+  
   navClouds: [
     {
       title: "Capture",

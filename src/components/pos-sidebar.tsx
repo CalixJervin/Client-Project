@@ -12,24 +12,18 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { AccountModal } from "@/Login/accountModal"
 import { useState } from "react"
-import { Settings, LogOut } from "lucide-react"
-import { CommandIcon, ListIcon, ChartBarIcon, FolderIcon, UsersIcon, CameraIcon, FileTextIcon, Settings2Icon, CircleHelpIcon, SearchIcon, DatabaseIcon, FileChartColumnIcon, FileIcon } from "lucide-react"
-
-// This is sample data.
-const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
-}
+import { Settings, LogOut, LayoutDashboard, ShoppingCart, Users } from "lucide-react"
+import { CommandIcon } from "lucide-react"
+import { useAuth } from "@/hooks/use-auth"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { setOpenMobile } = useSidebar()
   const [isAccountOpen, setIsAccountOpen] = useState(false)
+  const { user, logout, switchUser } = useAuth()
+  const navigate = useNavigate()
 
   return (
     <Sidebar {...props}>
@@ -47,16 +41,29 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuItem>
               <SidebarMenuButton asChild>
                 <Link to="/" onClick={() => setOpenMobile(false)}>
+                  <ShoppingCart className="size-4" />
                   <span>POS</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
+
+            {user?.role === "admin" && (
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link to="/dashboard" onClick={() => setOpenMobile(false)}>
+                    <LayoutDashboard className="size-4" />
+                    <span>Dashboard</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
             
             <SidebarRail />
             
             <SidebarMenuItem>
               <SidebarMenuButton asChild>
                 <Link to="/menuManagement" onClick={() => setOpenMobile(false)}>
+                  <Settings className="size-4" />
                   <span>Edit Menu</span>
                 </Link>
               </SidebarMenuButton>
@@ -66,38 +73,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarGroup>
       </SidebarContent>
 
-      {/* NEW: Populated SidebarFooter with Settings and Logout */}
       <SidebarFooter className="border-t border-sidebar-border p-2">
-        <SidebarMenu>
-          
-          <SidebarMenuItem>
-            <SidebarMenuButton onClick={() => setIsAccountOpen(true)}>
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Account Settings</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <Link 
-                to="/login" 
-                onClick={() => {
-                  localStorage.removeItem("currentUser") // Clear the session
-                  setOpenMobile(false) // Close the mobile sidebar
-                }}
-              >
-                <LogOut className="mr-2 h-4 w-4 text-destructive" />
-                <span className="text-destructive font-medium">Log Out</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-
-        </SidebarMenu>
+        <NavUser />
       </SidebarFooter>
       
       <SidebarRail />
 
-      {/* NEW: The Account Settings Modal */}
       <AccountModal isOpen={isAccountOpen} onOpenChange={setIsAccountOpen} />
     </Sidebar>
   )

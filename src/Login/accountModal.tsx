@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DialogFooter } from "@/components/ui/dialog";
 import { Trash2, Plus, ShieldAlert, Coffee, KeyRound, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import bcrypt from "bcryptjs";
@@ -22,6 +23,10 @@ export function AccountModal({ isOpen, onOpenChange }: { isOpen: boolean, onOpen
   const [newRole, setNewRole] = useState<"barista" | "admin">("barista");
   const [newPin, setNewPin] = useState("");
 
+  // States for Deletion
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [staffToDelete, setStaffToDelete] = useState<{id: string, name: string} | null>(null);
+
   // States for Change PIN
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
   const [currentPin, setCurrentPin] = useState("");
@@ -36,16 +41,23 @@ export function AccountModal({ isOpen, onOpenChange }: { isOpen: boolean, onOpen
   }, [isOpen]);
 
   const handleDelete = (id: string, name: string) => {
-    if (id === localStorage.getItem("currentUser")) {
+    if (id === localStorage.getItem("timpla_current_user_id")) {
       return toast.error("You cannot delete your own account while logged in.");
     }
-    if (window.confirm(`Permanently delete ${name}?`)) {
-      const updated = staffList.filter(s => s.id !== id);
-      setStaffList(updated);
-      localStorage.setItem("timpla_staff", JSON.stringify(updated));
-      localStorage.removeItem(`${id}_pin`);
-      toast.success(`${name} deleted.`);
-    }
+    setStaffToDelete({ id, name });
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (!staffToDelete) return;
+    const { id, name } = staffToDelete;
+    const updated = staffList.filter(s => s.id !== id);
+    setStaffList(updated);
+    localStorage.setItem("timpla_staff", JSON.stringify(updated));
+    localStorage.removeItem(`${id}_pin`);
+    toast.success(`${name} deleted.`);
+    setIsDeleteConfirmOpen(false);
+    setStaffToDelete(null);
   };
 
   const handleAddAccount = () => {
@@ -155,6 +167,21 @@ export function AccountModal({ isOpen, onOpenChange }: { isOpen: boolean, onOpen
           )}
         </div>
       </DialogContent>
+
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription className="py-4">
+              Are you sure you want to permanently delete <strong>{staffToDelete?.name}</strong>? This will revoke their access to the POS.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => setIsDeleteConfirmOpen(false)} className="flex-1">Cancel</Button>
+            <Button variant="destructive" onClick={confirmDelete} className="flex-1">Delete Account</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

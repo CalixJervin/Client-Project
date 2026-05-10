@@ -30,6 +30,9 @@ export function StaffManagement() {
   const { staffList, addStaff, deleteStaff, user: currentUser } = useAuth()
   
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
+  const [staffToDelete, setStaffToDelete] = useState<Staff | null>(null)
+  
   const [newName, setNewName] = useState("")
   const [newRole, setNewRole] = useState<Role>("cashier")
   const [newPin, setNewPin] = useState("")
@@ -57,13 +60,20 @@ export function StaffManagement() {
     }
   }
 
-  const handleDelete = (staff: Staff) => {
+  const handleDeleteClick = (staff: Staff) => {
     if (staff.id === currentUser?.id) {
       return toast.error("You cannot delete your own account")
     }
-    if (window.confirm(`Are you sure you want to delete ${staff.name}?`)) {
-      deleteStaff(staff.id)
-      toast.success(`${staff.name} deleted`)
+    setStaffToDelete(staff)
+    setIsDeleteConfirmOpen(true)
+  }
+
+  const handleConfirmDelete = () => {
+    if (staffToDelete) {
+      deleteStaff(staffToDelete.id)
+      toast.success(`${staffToDelete.name} deleted`)
+      setIsDeleteConfirmOpen(false)
+      setStaffToDelete(null)
     }
   }
 
@@ -172,7 +182,7 @@ export function StaffManagement() {
                     variant="ghost" 
                     size="icon" 
                     className="text-destructive hover:bg-destructive/10"
-                    onClick={() => handleDelete(staff)}
+                    onClick={() => handleDeleteClick(staff)}
                     disabled={staff.id === currentUser?.id}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -182,6 +192,21 @@ export function StaffManagement() {
             ))}
           </TableBody>
         </Table>
+
+        <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm Staff Deletion</DialogTitle>
+              <DialogDescription className="py-4">
+                Are you sure you want to delete <strong>{staffToDelete?.name}</strong>? This action will permanently remove their access.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex gap-2">
+              <Button variant="outline" onClick={() => setIsDeleteConfirmOpen(false)} className="flex-1">Cancel</Button>
+              <Button variant="destructive" onClick={handleConfirmDelete} className="flex-1">Delete Account</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   )

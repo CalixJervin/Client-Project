@@ -37,6 +37,7 @@ export default function ManageMenuPage() {
   const [isAddProductOpen, setIsAddProductOpen] = useState(false)
   const [isEditProductOpen, setIsEditProductOpen] = useState(false)
   const [isDeleteProductOpen, setIsDeleteProductOpen] = useState(false)
+  const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<any>(null)
 
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false)
@@ -74,26 +75,27 @@ export default function ManageMenuPage() {
 
   // --- BULK ACTION HANDLERS ---
   const handleBulkDelete = () => {
+    setIsBulkDeleteConfirmOpen(true);
+  }
+
+  const handleConfirmBulkDelete = () => {
     if (activeTab === "products") {
-      if (window.confirm(`Are you sure you want to delete ${selectedProductIds.length} products?`)) {
-        selectedProductIds.forEach(id => deleteProduct(id));
-        setSelectedProductIds([]);
-        toast.success("Products deleted.");
-      }
+      selectedProductIds.forEach(id => deleteProduct(id));
+      setSelectedProductIds([]);
+      toast.success(`${selectedProductIds.length} products deleted.`);
     } else {
-      if (window.confirm(`Are you sure you want to delete ${selectedCategoryNames.length} categories? Products inside will be moved to "Uncategorized".`)) {
-        let updatedCategories = categories.filter(c => !selectedCategoryNames.includes(c));
-        inventoryProducts.forEach(p => {
-          if (selectedCategoryNames.includes(p.category)) {
-            updateProduct(p.id, { category: "Uncategorized" as any });
-          }
-        });
-        if (!updatedCategories.includes("Uncategorized")) updatedCategories.push("Uncategorized");
-        setCategories(updatedCategories);
-        setSelectedCategoryNames([]);
-        toast.success("Categories deleted.");
-      }
+      let updatedCategories = categories.filter(c => !selectedCategoryNames.includes(c));
+      inventoryProducts.forEach(p => {
+        if (selectedCategoryNames.includes(p.category)) {
+          updateProduct(p.id, { category: "Uncategorized" as any });
+        }
+      });
+      if (!updatedCategories.includes("Uncategorized")) updatedCategories.push("Uncategorized");
+      setCategories(updatedCategories);
+      setSelectedCategoryNames([]);
+      toast.success(`${selectedCategoryNames.length} categories deleted.`);
     }
+    setIsBulkDeleteConfirmOpen(false);
   }
 
   const handleBulkEdit = () => {
@@ -442,10 +444,29 @@ export default function ManageMenuPage() {
       </AnimatePresence>
 
       {/* MODALS */}
-      <AddProductModal isOpen={isAddProductOpen} onOpenChange={setIsAddProductOpen} onAddProduct={handleAddProduct} />
+      <AddProductModal isOpen={isAddProductOpen} onOpenChange={setIsAddProductOpen} onAddProduct={handleAddProduct} categories={categories} />
       <EditProductModal isOpen={isEditProductOpen} onOpenChange={setIsEditProductOpen} product={selectedProduct} categories={categories} onSave={handleEditProduct} />
       <DeleteProductModal isOpen={isDeleteProductOpen} onOpenChange={setIsDeleteProductOpen} product={selectedProduct} onDeleteProduct={handleDeleteProduct} />
       <AddCategoryModal isOpen={isAddCategoryOpen} onOpenChange={setIsAddCategoryOpen} onAddCategory={handleAddCategory} existingProducts={inventoryProducts as any} existingCategories={categories} />
+
+      {/* BULK DELETE CONFIRMATION */}
+      <Dialog open={isBulkDeleteConfirmOpen} onOpenChange={setIsBulkDeleteConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Bulk Deletion</DialogTitle>
+            <DialogDescription className="py-4">
+              {activeTab === "products" 
+                ? `Are you sure you want to delete ${selectedProductIds.length} selected products? This action cannot be undone.`
+                : `Are you sure you want to delete ${selectedCategoryNames.length} selected categories? Products inside will be moved to "Uncategorized".`
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => setIsBulkDeleteConfirmOpen(false)} className="flex-1 sm:flex-none">Cancel</Button>
+            <Button variant="destructive" onClick={handleConfirmBulkDelete} className="flex-1 sm:flex-none">Delete All</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isEditCategoryOpen} onOpenChange={setIsEditCategoryOpen}>
         <DialogContent className="sm:max-w-md">

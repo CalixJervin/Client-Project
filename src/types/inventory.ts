@@ -38,7 +38,7 @@ export interface ProductVariant {
   recipeId: string | null;
 }
 
-export type ProductCategory = 'Drinks' | 'Food' | 'Pastries' | 'Add-ons';
+export type ProductCategory = string;
 export type ProductAvailability = 'all-day' | 'morning' | 'weekend';
 export type ProductType = 'made-to-order' | 'ready-made';
 

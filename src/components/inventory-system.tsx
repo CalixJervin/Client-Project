@@ -217,6 +217,7 @@ export function InventorySystem() {
           <AddProductWizard 
             ingredients={ingredients}
             recipes={recipes}
+            categories={["Hot Coffee", "Iced Coffee", "Milk Tea", "Fruit Tea", "Pastries"]}
             onComplete={(productData) => {
               addProduct(productData);
               setIsAddProductOpen(false);

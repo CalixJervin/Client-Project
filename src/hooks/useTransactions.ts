@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import type { CartItem } from "./useCart";
+import { generateId } from "@/lib/utils";
 
 export interface Transaction {
   id: string;
@@ -41,7 +42,7 @@ export function useTransactions() {
   }, []);
 
   const saveTransaction = (cart: CartItem[], total: number, paymentMethod: "cash" | "gcash") => {
-    const transactionId = crypto.randomUUID();
+    const transactionId = generateId();
     // Generate a shorter, readable order ID for the UI
     const orderNum = Math.floor(Math.random() * 9000) + 1000;
     const orderId = `#ORD-${orderNum}`;
@@ -55,7 +56,7 @@ export function useTransactions() {
     };
 
     const newItems: TransactionItem[] = cart.map((item) => ({
-      id: crypto.randomUUID(),
+      id: generateId(),
       transaction_id: transactionId,
       product_id: item.id,
       product_name: item.name,

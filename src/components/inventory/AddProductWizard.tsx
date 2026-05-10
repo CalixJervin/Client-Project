@@ -3,7 +3,6 @@ import type {
   Ingredient, 
   Recipe, 
   Product, 
-  ProductCategory, 
   ProductAvailability,
   ProductType
 } from "@/types/inventory";
@@ -32,6 +31,7 @@ import { toast } from "sonner";
 interface AddProductWizardProps {
   ingredients: Ingredient[];
   recipes: Recipe[];
+  categories: string[];
   onComplete: (data: Omit<Product, 'id'>) => void;
   onAddRecipe: (data: Omit<Recipe, 'id'>) => string;
 }
@@ -39,6 +39,7 @@ interface AddProductWizardProps {
 export function AddProductWizard({
   ingredients,
   recipes,
+  categories,
   onComplete,
   onAddRecipe
 }: AddProductWizardProps) {
@@ -47,7 +48,10 @@ export function AddProductWizard({
   
   // Product state
   const [name, setName] = useState("");
-  const [category, setCategory] = useState<ProductCategory>("Drinks");
+  const [category, setCategory] = useState<string>(() => {
+    const validCategories = categories.filter(c => c !== "All");
+    return validCategories[0] || "Uncategorized";
+  });
   const [availability, setAvailability] = useState<ProductAvailability>("all-day");
   const [type, setType] = useState<ProductType>("made-to-order");
   const [price, setPrice] = useState("");
@@ -138,15 +142,14 @@ export function AddProductWizard({
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-1.5">
                   <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Category</label>
-                  <Select value={category} onValueChange={(val) => setCategory(val as ProductCategory)}>
+                  <Select value={category} onValueChange={(val) => setCategory(val)}>
                     <SelectTrigger className="h-11">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Drinks">Drinks</SelectItem>
-                      <SelectItem value="Food">Food</SelectItem>
-                      <SelectItem value="Pastries">Pastries</SelectItem>
-                      <SelectItem value="Add-ons">Add-ons</SelectItem>
+                      {categories.filter(c => c !== "All").map(cat => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

@@ -6,6 +6,7 @@ import type {
 import { storage, calculateIngredientStatus } from '../lib/storage';
 import { toast } from 'sonner';
 import { mockProducts } from '../POS/products';
+import { generateId } from '../lib/utils';
 
 interface InventoryContextType {
   ingredients: Ingredient[];
@@ -85,7 +86,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   const addIngredient = useCallback((data: any) => {
     const newIngredient: Ingredient = {
       ...data,
-      id: crypto.randomUUID(),
+      id: generateId(),
       restockLog: [],
       status: calculateIngredientStatus(data.currentStock, data.lowStockThreshold),
     };
@@ -124,7 +125,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const addRecipe = useCallback((data: any) => {
-    const newRecipe: Recipe = { ...data, id: crypto.randomUUID() };
+    const newRecipe: Recipe = { ...data, id: generateId() };
     setRecipes(prev => [...prev, newRecipe]);
     return newRecipe.id;
   }, []);
@@ -138,7 +139,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const addProduct = useCallback((data: any) => {
-    const newProduct: Product = { ...data, id: crypto.randomUUID() };
+    const newProduct: Product = { ...data, id: generateId() };
     setProducts(prev => [...prev, newProduct]);
   }, []);
 
@@ -244,7 +245,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     const product = products.find(p => p.id === productId);
     if (product) {
       const newSale: Sale = {
-        id: crypto.randomUUID(),
+        id: generateId(),
         date: new Date().toISOString(),
         productId,
         variantIndex,

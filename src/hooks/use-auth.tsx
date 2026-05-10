@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from "react"
 import bcrypt from "bcryptjs"
 import { storage } from "@/lib/storage"
+import { generateId } from "@/lib/utils"
 
 export type Role = "cashier" | "admin"
 
@@ -164,9 +165,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, message: "Maximum 3 admin accounts allowed." }
     }
 
-    const id = (typeof crypto !== 'undefined' && crypto.randomUUID) 
-      ? crypto.randomUUID() 
-      : Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    const id = generateId()
     const avatarInitials = staffData.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
     const newStaff: Staff = { ...staffData, id, avatarInitials }
 

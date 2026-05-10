@@ -11,12 +11,14 @@ interface AddProductModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onAddProduct: (productData: any) => void;
+  categories: string[];
 }
 
 export function AddProductModal({
   isOpen,
   onOpenChange,
   onAddProduct,
+  categories,
 }: AddProductModalProps) {
   const { ingredients, recipes, addRecipe } = useInventory();
 
@@ -29,6 +31,7 @@ export function AddProductModal({
         <AddProductWizard 
           ingredients={ingredients}
           recipes={recipes}
+          categories={categories}
           onComplete={(productData) => {
             onAddProduct(productData);
             onOpenChange(false);

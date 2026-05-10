@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import { Delete, ArrowLeft, ShieldAlert, Coffee, Clock, UserPlus, LogIn, LayoutDashboard, ShoppingCart } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -20,7 +20,7 @@ export default function LoginPage() {
     addStaff 
   } = useAuth()
   
-  const [view, setView] = useState<"onboarding" | "select" | "pin" | "mode">("select")
+  const [view, setView] = useState<"onboarding" | "select" | "pin">("select")
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null)
   const [pin, setPin] = useState("")
   const [isVerifying, setIsVerifying] = useState(false)
@@ -35,7 +35,7 @@ export default function LoginPage() {
       setView("onboarding")
     } else if (user && !isLocked) {
       if (user.role === "admin") {
-        setView("mode")
+        navigate("/dashboard")
       } else {
         navigate("/")
       }
@@ -47,15 +47,18 @@ export default function LoginPage() {
     }
   }, [isInitialSetup, user, isLocked, navigate])
 
-  const handleKeyPress = (num: string) => {
-    if (pin.length < 6) {
-      setPin(prev => prev + num)
-    }
-  }
+  const handleKeyPress = useCallback((num: string) => {
+    setPin(prev => {
+      if (prev.length < 6) {
+        return prev + num
+      }
+      return prev
+    })
+  }, [])
 
-  const handleDelete = () => setPin(prev => prev.slice(0, -1))
+  const handleDelete = useCallback(() => setPin(prev => prev.slice(0, -1)), [])
 
-  const handleLogin = async () => {
+  const handleLogin = useCallback(async () => {
     if (!selectedStaff || pin.length < 4) return
     
     setIsVerifying(true)
@@ -69,7 +72,7 @@ export default function LoginPage() {
       toast.success(result.message)
       setPin("")
       if (selectedStaff.role === "admin") {
-        setView("mode")
+        navigate("/dashboard")
       } else {
         navigate("/")
       }
@@ -77,7 +80,32 @@ export default function LoginPage() {
       toast.error(result.message)
       setPin("")
     }
-  }
+  }, [selectedStaff, pin, isLocked, user, unlock, login, navigate])
+
+  // Keyboard support for PIN pad
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (view !== "pin" || isVerifying) return
+
+      // Handle numbers
+      if (e.key >= "0" && e.key <= "9") {
+        handleKeyPress(e.key)
+      } 
+      // Handle backspace
+      else if (e.key === "Backspace") {
+        handleDelete()
+      }
+      // Handle enter (manual submit if needed, though auto-submit is active)
+      else if (e.key === "Enter") {
+        if (pin.length >= 4) {
+          handleLogin()
+        }
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [view, pin, handleKeyPress, handleDelete, handleLogin, isVerifying])
 
   // Auto-submit when PIN length is sufficient (assuming 4-6 digits)
   useEffect(() => {
@@ -87,7 +115,7 @@ export default function LoginPage() {
       }, 300)
       return () => clearTimeout(timer)
     }
-  }, [pin, selectedStaff, view, isVerifying])
+  }, [pin, selectedStaff, view, isVerifying, handleLogin])
 
   const handleOnboarding = async () => {
     if (!adminName.trim()) return toast.error("Please enter your name")
@@ -235,42 +263,6 @@ export default function LoginPage() {
                     <Delete className="h-6 w-6" />
                   </Button>
                 </div>
-              </motion.div>
-            )}
-
-            {/* MODE SELECTION (ADMIN ONLY) */}
-            {view === "mode" && user && (
-              <motion.div key="mode" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="flex flex-col items-center justify-center flex-1 space-y-8">
-                <div className="text-center">
-                  <h2 className="text-2xl font-bold">Welcome back, {user.name}</h2>
-                  <p className="text-muted-foreground">Choose where you'd like to go</p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-md">
-                  <button 
-                    onClick={() => navigate("/")}
-                    className="flex flex-col items-center gap-4 p-8 rounded-3xl bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all active:scale-95"
-                  >
-                    <div className="h-16 w-16 rounded-full bg-white/20 flex items-center justify-center">
-                      <ShoppingCart className="h-8 w-8" />
-                    </div>
-                    <span className="text-xl font-bold">Go to POS</span>
-                  </button>
-
-                  <button 
-                    onClick={() => navigate("/dashboard")}
-                    className="flex flex-col items-center gap-4 p-8 rounded-3xl bg-muted hover:bg-muted/80 border shadow-sm transition-all active:scale-95"
-                  >
-                    <div className="h-16 w-16 rounded-full bg-background flex items-center justify-center">
-                      <LayoutDashboard className="h-8 w-8" />
-                    </div>
-                    <span className="text-xl font-bold">Go to Dashboard</span>
-                  </button>
-                </div>
-
-                <Button variant="ghost" onClick={() => { setView("select"); }} className="mt-4">
-                  Switch User
-                </Button>
               </motion.div>
             )}
 

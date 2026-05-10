@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Plus, Trash2, Minus, X } from "lucide-react"; // ADDED: X icon
 import type { CartItem } from "@/hooks/useCart";
+import { useTransactions } from "@/hooks/useTransactions";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
+import { useInventory } from "@/hooks/useInventory";
 
 interface TicketSidebarProps {
   cart: CartItem[];
@@ -19,7 +21,6 @@ interface TicketSidebarProps {
   removeFromCart: (id: number) => void;
   clearCart: () => void;
   subtotal: number;
-  tax: number;
   total: number;
   onClose?: () => void; // ADDED: Optional onClose prop
 }
@@ -30,7 +31,6 @@ export function TicketSidebar({
   removeFromCart,
   clearCart,
   subtotal,
-  tax,
   total,
   onClose // ADDED: Destructure onClose
 }: TicketSidebarProps) {
@@ -38,6 +38,8 @@ export function TicketSidebar({
   const [amountReceived, setAmountReceived] = useState<number | "">("");
   
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "gcash">("cash");
+  const { saveTransaction } = useTransactions();
+  const { processSale, products: inventoryProducts } = useInventory();
 
   const change = typeof amountReceived === "number" ? amountReceived - total : 0;
   
@@ -45,11 +47,21 @@ export function TicketSidebar({
 
   const handleCompleteTransaction = () => {
     if (isSufficient) {
+      // Auto-deduction logic
+      cart.forEach(item => {
+        // Try to find a matching product in inventory by name or ID
+        const invProduct = inventoryProducts.find(p => p.name === item.name || p.id === String(item.id));
+        if (invProduct) {
+          processSale(invProduct.id, 0, item.qty);
+        }
+      });
+
+      saveTransaction(cart, subtotal, paymentMethod);
       clearCart();
       setIsCheckoutOpen(false);
       setAmountReceived("");
       setPaymentMethod("cash"); 
-      if (onClose) onClose(); // NEW: Automatically close ticket on mobile after checkout!
+      if (onClose) onClose();
     }
   };
 

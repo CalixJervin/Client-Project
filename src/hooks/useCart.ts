@@ -44,8 +44,7 @@ export function useCart() {
   const clearCart = () => setCart([]);
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-  const tax = subtotal * 0.12;
-  const total = subtotal + tax;
+  const total = subtotal;
 
   // Return exactly what the UI needs to function
   return {
@@ -55,7 +54,6 @@ export function useCart() {
     removeFromCart,
     clearCart,
     subtotal,
-    tax,
     total
   };
 }

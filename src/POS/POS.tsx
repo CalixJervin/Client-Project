@@ -17,7 +17,7 @@ import { SiteHeader } from "@/components/site-header"
 export default function Page() {
   const { 
     cart, addToCart, updateQty, removeFromCart, 
-    clearCart, subtotal, tax, total 
+    clearCart, subtotal, total 
   } = useCart()
 
   const [isMobileTicketOpen, setIsMobileTicketOpen] = useState(false)
@@ -198,7 +198,6 @@ export default function Page() {
           removeFromCart={removeFromCart}
           clearCart={clearCart}
           subtotal={subtotal}
-          tax={tax}
           total={total}
         />
       </div>
@@ -217,7 +216,6 @@ export default function Page() {
               removeFromCart={removeFromCart}
               clearCart={clearCart}
               subtotal={subtotal}
-              tax={tax}
               total={total}
               onClose={() => setIsMobileTicketOpen(false)}
             />

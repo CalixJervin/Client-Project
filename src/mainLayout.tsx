@@ -1,10 +1,14 @@
 import { Outlet } from "react-router-dom"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/pos-sidebar"
+import { useAuth } from "@/hooks/use-auth"
 
 export default function MainLayout() {
+  const { user } = useAuth()
+  const isAdmin = user?.role === "admin"
+
   return (
-    <SidebarProvider defaultOpen={false}>
+    <SidebarProvider defaultOpen={isAdmin}>
       <AppSidebar />
       <SidebarInset className="h-screen overflow-hidden">
         <Outlet /> 

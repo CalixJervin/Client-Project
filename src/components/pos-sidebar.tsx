@@ -15,7 +15,7 @@ import {
 import { Link, useNavigate } from "react-router-dom"
 import { AccountModal } from "@/Login/accountModal"
 import { useState } from "react"
-import { Settings, LogOut, LayoutDashboard, ShoppingCart, Users } from "lucide-react"
+import { Settings, LogOut, LayoutDashboard, ShoppingCart, Users, Package } from "lucide-react"
 import { CommandIcon } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 
@@ -48,14 +48,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenuItem>
 
             {user?.role === "admin" && (
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link to="/dashboard" onClick={() => setOpenMobile(false)}>
-                    <LayoutDashboard className="size-4" />
-                    <span>Dashboard</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              <>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <Link to="/dashboard" onClick={() => setOpenMobile(false)}>
+                      <LayoutDashboard className="size-4" />
+                      <span>Dashboard</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <Link to="/inventory" onClick={() => setOpenMobile(false)}>
+                      <Package className="size-4" />
+                      <span>Inventory</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </>
             )}
             
             <SidebarRail />

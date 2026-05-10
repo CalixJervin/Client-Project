@@ -12,15 +12,16 @@ import { motion, AnimatePresence } from "framer-motion"
 import { SiteHeader } from "@/components/site-header"
 
 // Import your Modals and Types
-import { mockProducts } from "@/POS/products" 
 import type { Product } from "@/hooks/useCart"
 import { AddProductModal } from "@/POS/addProduct"
 import { EditProductModal } from "@/POS/editProduct"
 import DeleteProductModal from "@/POS/deleteProduct"
 import { AddCategoryModal } from "@/POS/addCategory"
 
+import { useInventory } from "@/hooks/useInventory"
+
 export default function ManageMenuPage() {
-  const [products, setProducts] = useState<Product[]>(mockProducts)
+  const { products, addProduct, updateProduct, deleteProduct } = useInventory()
   const [categories, setCategories] = useState(["Hot Coffee", "Iced Coffee", "Milk Tea", "Fruit Tea", "Pastries"])
   const [searchQuery, setSearchQuery] = useState("")
 
@@ -74,14 +75,18 @@ export default function ManageMenuPage() {
   const handleBulkDelete = () => {
     if (activeTab === "products") {
       if (window.confirm(`Are you sure you want to delete ${selectedProductIds.length} products?`)) {
-        setProducts(products.filter(p => !selectedProductIds.includes(p.id)));
+        selectedProductIds.forEach(id => deleteProduct(id));
         setSelectedProductIds([]);
         toast.success("Products deleted.");
       }
     } else {
       if (window.confirm(`Are you sure you want to delete ${selectedCategoryNames.length} categories? Products inside will be moved to "Uncategorized".`)) {
         let updatedCategories = categories.filter(c => !selectedCategoryNames.includes(c));
-        setProducts(products.map(p => selectedCategoryNames.includes(p.category) ? { ...p, category: "Uncategorized" } : p));
+        products.forEach(p => {
+          if (selectedCategoryNames.includes(p.category)) {
+            updateProduct(p.id, { category: "Uncategorized" });
+          }
+        });
         if (!updatedCategories.includes("Uncategorized")) updatedCategories.push("Uncategorized");
         setCategories(updatedCategories);
         setSelectedCategoryNames([]);
@@ -107,23 +112,23 @@ export default function ManageMenuPage() {
 
   // --- STANDARD HANDLERS ---
   const handleAddProduct = (newProduct: Product) => {
-    setProducts([...products, newProduct])
+    addProduct(newProduct)
     toast.success(`${newProduct.name} added!`)
   }
   const handleEditProduct = (updatedProduct: Product) => {
-    setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p))
+    updateProduct(updatedProduct.id, updatedProduct)
     setSelectedProductIds([]);
     toast.success(`${updatedProduct.name} updated!`)
   }
   const handleDeleteProduct = (id: number) => {
-    setProducts(products.filter(p => p.id !== id))
+    deleteProduct(id)
     toast.success("Product deleted.")
   }
 
-  const handleAddCategory = (newCategory: string, selectedProductIds: number[]) => {
+  const handleAddCategory = (newCategory: string, selectedIds: number[]) => {
     setCategories([...categories, newCategory])
-    if (selectedProductIds.length > 0) {
-      setProducts(products.map(p => selectedProductIds.includes(p.id) ? { ...p, category: newCategory } : p))
+    if (selectedIds.length > 0) {
+      selectedIds.forEach(id => updateProduct(id, { category: newCategory }))
     }
     toast.success(`${newCategory} created!`)
   }
@@ -134,7 +139,11 @@ export default function ManageMenuPage() {
       return;
     }
     setCategories(categories.map(c => c === selectedCategory ? newCategoryName : c))
-    setProducts(products.map(p => p.category === selectedCategory ? { ...p, category: newCategoryName } : p))
+    products.forEach(p => {
+      if (p.category === selectedCategory) {
+        updateProduct(p.id, { category: newCategoryName });
+      }
+    });
     setIsEditCategoryOpen(false)
     setSelectedCategoryNames([]);
     toast.success("Category renamed!")
@@ -142,7 +151,11 @@ export default function ManageMenuPage() {
 
   const handleConfirmCategoryDelete = () => {
     let updatedCategories = categories.filter(c => c !== selectedCategory);
-    setProducts(products.map(p => p.category === selectedCategory ? { ...p, category: "Uncategorized" } : p))
+    products.forEach(p => {
+      if (p.category === selectedCategory) {
+        updateProduct(p.id, { category: "Uncategorized" });
+      }
+    });
     if (!updatedCategories.includes("Uncategorized")) updatedCategories.push("Uncategorized");
     setCategories(updatedCategories)
     setIsDeleteCategoryOpen(false)
@@ -239,57 +252,64 @@ export default function ManageMenuPage() {
                     <TableHead className="w-[80px]">Image</TableHead>
                     <TableHead>Product Name</TableHead>
                     <TableHead>Category</TableHead>
-                    <TableHead className="text-right">Price</TableHead>
+                    <TableHead className="text-right">Price Range</TableHead>
                     <TableHead className="text-right w-[120px] hidden md:table-cell">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredProducts.map((product) => (
-                    <TableRow 
-                      key={product.id} 
-                      className={`transition-colors cursor-pointer md:cursor-default ${selectedProductIds.includes(product.id) ? "bg-muted/30" : ""}`}
-                      
-                      onTouchStart={() => {
-                        if (selectedProductIds.length === 0) {
-                          pressTimer.current = setTimeout(() => {
-                            toggleProduct(product.id)
-                            if (window.navigator?.vibrate) window.navigator.vibrate(50)
-                          }, 450)
-                        }
-                      }}
-                      onTouchEnd={cancelPressTimer}
-                      onTouchMove={cancelPressTimer}
-                      
-                      onClick={() => {
-                        if (selectedProductIds.length > 0) toggleProduct(product.id)
-                      }}
-                    >
-                      {/* Hidden completely on desktop (md:hidden) */}
-                      <TableCell className={`text-center transition-all md:hidden ${selectedProductIds.length > 0 ? "table-cell" : "hidden"}`}>
-                        <input 
-                          type="checkbox" 
-                          className="accent-primary h-4 w-4 rounded cursor-pointer"
-                          checked={selectedProductIds.includes(product.id)}
-                          onChange={() => toggleProduct(product.id)}
-                          onClick={(e) => e.stopPropagation()} 
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <div className="h-10 w-10 rounded-md overflow-hidden bg-muted">
-                          <img src={product.image} alt={product.name} className="h-full w-full object-cover pointer-events-none" />
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium">{product.name}</TableCell>
-                      <TableCell><span className="bg-secondary text-secondary-foreground px-2 py-1 rounded-md text-xs font-medium">{product.category}</span></TableCell>
-                      <TableCell className="text-right font-medium">₱{product.price.toFixed(2)}</TableCell>
-                      <TableCell className="text-right hidden md:table-cell">
-                        <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" className="cursor-pointer" onClick={(e) => { e.stopPropagation(); setSelectedProduct(product); setIsEditProductOpen(true); }}><Edit className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" className="hover:text-destructive hover:bg-destructive/10 cursor-pointer" onClick={(e) => { e.stopPropagation(); setSelectedProduct(product); setIsDeleteProductOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {filteredProducts.map((product) => {
+                    const prices = product.variants.map(v => v.price);
+                    const minPrice = Math.min(...prices);
+                    const maxPrice = Math.max(...prices);
+                    const priceDisplay = minPrice === maxPrice ? `₱${minPrice.toFixed(2)}` : `₱${minPrice.toFixed(2)} - ₱${maxPrice.toFixed(2)}`;
+
+                    return (
+                      <TableRow 
+                        key={product.id} 
+                        className={`transition-colors cursor-pointer md:cursor-default ${selectedProductIds.includes(product.id) ? "bg-muted/30" : ""}`}
+                        
+                        onTouchStart={() => {
+                          if (selectedProductIds.length === 0) {
+                            pressTimer.current = setTimeout(() => {
+                              toggleProduct(product.id)
+                              if (window.navigator?.vibrate) window.navigator.vibrate(50)
+                            }, 450)
+                          }
+                        }}
+                        onTouchEnd={cancelPressTimer}
+                        onTouchMove={cancelPressTimer}
+                        
+                        onClick={() => {
+                          if (selectedProductIds.length > 0) toggleProduct(product.id)
+                        }}
+                      >
+                        {/* Hidden completely on desktop (md:hidden) */}
+                        <TableCell className={`text-center transition-all md:hidden ${selectedProductIds.length > 0 ? "table-cell" : "hidden"}`}>
+                          <input 
+                            type="checkbox" 
+                            className="accent-primary h-4 w-4 rounded cursor-pointer"
+                            checked={selectedProductIds.includes(product.id)}
+                            onChange={() => toggleProduct(product.id)}
+                            onClick={(e) => e.stopPropagation()} 
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div className="h-10 w-10 rounded-md overflow-hidden bg-muted">
+                            <img src={product.image} alt={product.name} className="h-full w-full object-cover pointer-events-none" />
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-medium">{product.name}</TableCell>
+                        <TableCell><span className="bg-secondary text-secondary-foreground px-2 py-1 rounded-md text-xs font-medium">{product.category}</span></TableCell>
+                        <TableCell className="text-right font-medium">{priceDisplay}</TableCell>
+                        <TableCell className="text-right hidden md:table-cell">
+                          <div className="flex justify-end gap-1">
+                            <Button variant="ghost" size="icon" className="cursor-pointer" onClick={(e) => { e.stopPropagation(); setSelectedProduct(product); setIsEditProductOpen(true); }}><Edit className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" className="hover:text-destructive hover:bg-destructive/10 cursor-pointer" onClick={(e) => { e.stopPropagation(); setSelectedProduct(product); setIsDeleteProductOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -419,7 +439,7 @@ export default function ManageMenuPage() {
       <AddProductModal isOpen={isAddProductOpen} onOpenChange={setIsAddProductOpen} onAddProduct={handleAddProduct} categories={categories} />
       <EditProductModal isOpen={isEditProductOpen} onOpenChange={setIsEditProductOpen} product={selectedProduct} categories={categories} onSave={handleEditProduct} />
       <DeleteProductModal isOpen={isDeleteProductOpen} onOpenChange={setIsDeleteProductOpen} product={selectedProduct} onDeleteProduct={handleDeleteProduct} />
-      <AddCategoryModal isOpen={isAddCategoryOpen} onOpenChange={setIsAddCategoryOpen} onAddCategory={handleAddCategory} existingProducts={products} existingCategories={categories} />
+      <AddCategoryModal isOpen={isAddCategoryOpen} onOpenChange={setIsAddCategoryOpen} onAddCategory={handleAddCategory} existingProducts={products as any} existingCategories={categories} />
 
       <Dialog open={isEditCategoryOpen} onOpenChange={setIsEditCategoryOpen}>
         <DialogContent className="sm:max-w-md">

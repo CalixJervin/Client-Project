@@ -4,8 +4,6 @@ import { SectionCards } from "@/components/section-cards"
 import { SiteHeader } from "@/components/site-header"
 import { StaffManagement } from "@/components/staff-management"
 
-import data from "./app/dashboard/data.json"
-
 export default function Page() {
   return (
     <div className="flex flex-1 flex-col overflow-auto">
@@ -18,7 +16,7 @@ export default function Page() {
               <ChartAreaInteractive />
             </div>
             
-            <DataTable data={data} />
+            <DataTable />
 
             <div className="px-4 lg:px-6">
               <StaffManagement />

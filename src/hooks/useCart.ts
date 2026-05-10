@@ -2,7 +2,7 @@
 import { useState } from "react";
 
 export interface Product {
-  id: number;
+  id: string;
   name: string;
   price: number;
   category: string;
@@ -28,7 +28,7 @@ export function useCart() {
     });
   };
 
-  const updateQty = (id: number, delta: number) => {
+  const updateQty = (id: string, delta: number) => {
     setCart((prevCart) =>
       prevCart.map((item) =>
         item.id === id ? { ...item, qty: item.qty + delta } : item
@@ -37,7 +37,7 @@ export function useCart() {
     );
   };
 
-  const removeFromCart = (id: number) => {
+  const removeFromCart = (id: string) => {
     setCart((prevCart) => prevCart.filter((item) => item.id !== id));
   };
 

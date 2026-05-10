@@ -14,7 +14,7 @@ import type { Product } from "@/hooks/useCart";
 interface AddCategoryModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddCategory: (name: string, selectedProductIds: number[]) => void;
+  onAddCategory: (name: string, selectedProductIds: string[]) => void;
   existingProducts: Product[];
   existingCategories: string[];
 }
@@ -28,12 +28,12 @@ export function AddCategoryModal({
   existingCategories,
 }: AddCategoryModalProps) {
   const [categoryName, setCategoryName] = useState("");
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [error, setError] = useState("");
   
 
   // Toggle selection of products
-  const toggleProduct = (id: number) => {
+  const toggleProduct = (id: string) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((pId) => pId !== id) : [...prev, id]
     );

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Plus, Trash2, Minus, X } from "lucide-react"; // ADDED: X icon
 import type { CartItem } from "@/hooks/useCart";
 import { useTransactions } from "@/hooks/useTransactions";
@@ -17,8 +16,8 @@ import { useInventory } from "@/hooks/useInventory";
 
 interface TicketSidebarProps {
   cart: CartItem[];
-  updateQty: (id: number, delta: number) => void;
-  removeFromCart: (id: number) => void;
+  updateQty: (id: string, delta: number) => void;
+  removeFromCart: (id: string) => void;
   clearCart: () => void;
   subtotal: number;
   total: number;

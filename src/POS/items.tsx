@@ -5,8 +5,8 @@ import type { Product } from "@/hooks/useCart";
 interface ProductGridProps {
   products: Product[];
   onAddToCart: (product: Product) => void;
-  onDeleteProduct: (id: number, name: string) => void;
-  selectedProductId: number | null;
+  onDeleteProduct: (id: string, name: string) => void;
+  selectedProductId: string | null;
   onAddNewClick: () => void;
 }
 
@@ -22,16 +22,16 @@ export function ProductGrid({
       {products.map((product) => (
         <div
           key={product.id}
-          onClick={() => onAddToCart(product)}
+          onClick={() => (product as any).inStock !== false && onAddToCart(product)}
           // We use backticks ` ` here to allow the dynamic ${} logic
           className={`group relative aspect-square rounded-xl overflow-hidden cursor-pointer shadow-sm transition-all duration-150 border-2 ${
             selectedProductId === product.id 
               ? "border-primary scale-95 opacity-80 z-10" 
               : "border-border/50 hover:border-primary/50"
-          }`}
+          } ${(product as any).inStock === false ? "opacity-40 grayscale cursor-not-allowed pointer-events-none" : ""}`}
         >
           <img
-            src={product.image}
+            src={product.image || "https://placehold.co/600x600/e2e8f0/64748b?text=No+Image"}
             alt={product.name}
             className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
           />

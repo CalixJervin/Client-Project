@@ -12,7 +12,6 @@ import { motion, AnimatePresence } from "framer-motion"
 import { SiteHeader } from "@/components/site-header"
 
 // Import your Modals and Types
-import type { Product } from "@/hooks/useCart"
 import { AddProductModal } from "@/POS/addProduct"
 import { EditProductModal } from "@/POS/editProduct"
 import DeleteProductModal from "@/POS/deleteProduct"
@@ -21,14 +20,14 @@ import { AddCategoryModal } from "@/POS/addCategory"
 import { useInventory } from "@/hooks/useInventory"
 
 export default function ManageMenuPage() {
-  const { products, addProduct, updateProduct, deleteProduct } = useInventory()
+  const { products: inventoryProducts, addProduct, updateProduct, deleteProduct } = useInventory()
   const [categories, setCategories] = useState(["Hot Coffee", "Iced Coffee", "Milk Tea", "Fruit Tea", "Pastries"])
   const [searchQuery, setSearchQuery] = useState("")
 
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("products")
 
-  const [selectedProductIds, setSelectedProductIds] = useState<number[]>([])
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([])
   const [selectedCategoryNames, setSelectedCategoryNames] = useState<string[]>([])
 
   // Ref to track the long-press timer
@@ -38,7 +37,7 @@ export default function ManageMenuPage() {
   const [isAddProductOpen, setIsAddProductOpen] = useState(false)
   const [isEditProductOpen, setIsEditProductOpen] = useState(false)
   const [isDeleteProductOpen, setIsDeleteProductOpen] = useState(false)
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  const [selectedProduct, setSelectedProduct] = useState<any>(null)
 
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false)
   const [isEditCategoryOpen, setIsEditCategoryOpen] = useState(false)
@@ -46,10 +45,12 @@ export default function ManageMenuPage() {
   const [selectedCategory, setSelectedCategory] = useState("")
   const [newCategoryName, setNewCategoryName] = useState("")
 
-  const filteredProducts = products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  // Map inventory products to POS structure for filtered display if needed, 
+  // but here we can just use inventoryProducts directly for management.
+  const filteredProducts = inventoryProducts.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
 
   // --- SELECTION HANDLERS ---
-  const toggleProduct = (id: number) => {
+  const toggleProduct = (id: string) => {
     setSelectedProductIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
   }
   const toggleAllProducts = (checked: boolean) => {
@@ -82,9 +83,9 @@ export default function ManageMenuPage() {
     } else {
       if (window.confirm(`Are you sure you want to delete ${selectedCategoryNames.length} categories? Products inside will be moved to "Uncategorized".`)) {
         let updatedCategories = categories.filter(c => !selectedCategoryNames.includes(c));
-        products.forEach(p => {
+        inventoryProducts.forEach(p => {
           if (selectedCategoryNames.includes(p.category)) {
-            updateProduct(p.id, { category: "Uncategorized" });
+            updateProduct(p.id, { category: "Uncategorized" as any });
           }
         });
         if (!updatedCategories.includes("Uncategorized")) updatedCategories.push("Uncategorized");
@@ -97,7 +98,7 @@ export default function ManageMenuPage() {
 
   const handleBulkEdit = () => {
     if (activeTab === "products" && selectedProductIds.length === 1) {
-      const product = products.find(p => p.id === selectedProductIds[0]);
+      const product = inventoryProducts.find(p => p.id === selectedProductIds[0]);
       if (product) {
         setSelectedProduct(product);
         setIsEditProductOpen(true);
@@ -111,24 +112,29 @@ export default function ManageMenuPage() {
   }
 
   // --- STANDARD HANDLERS ---
-  const handleAddProduct = (newProduct: Product) => {
-    addProduct(newProduct)
-    toast.success(`${newProduct.name} added!`)
+  const handleAddProduct = (productData: any) => {
+    addProduct(productData)
+    toast.success("Product added successfully")
   }
-  const handleEditProduct = (updatedProduct: Product) => {
-    updateProduct(updatedProduct.id, updatedProduct)
+  const handleEditProduct = (updatedProduct: any) => {
+    updateProduct(updatedProduct.id, {
+      name: updatedProduct.name,
+      category: updatedProduct.category,
+      variants: [{ size: 'Regular', price: updatedProduct.price, recipeId: null }],
+      image: updatedProduct.image
+    })
     setSelectedProductIds([]);
     toast.success(`${updatedProduct.name} updated!`)
   }
-  const handleDeleteProduct = (id: number) => {
+  const handleDeleteProduct = (id: string) => {
     deleteProduct(id)
     toast.success("Product deleted.")
   }
 
-  const handleAddCategory = (newCategory: string, selectedIds: number[]) => {
+  const handleAddCategory = (newCategory: string, selectedIds: any[]) => {
     setCategories([...categories, newCategory])
     if (selectedIds.length > 0) {
-      selectedIds.forEach(id => updateProduct(id, { category: newCategory }))
+      selectedIds.forEach(id => updateProduct(id, { category: newCategory as any }))
     }
     toast.success(`${newCategory} created!`)
   }
@@ -139,9 +145,9 @@ export default function ManageMenuPage() {
       return;
     }
     setCategories(categories.map(c => c === selectedCategory ? newCategoryName : c))
-    products.forEach(p => {
+    inventoryProducts.forEach(p => {
       if (p.category === selectedCategory) {
-        updateProduct(p.id, { category: newCategoryName });
+        updateProduct(p.id, { category: newCategoryName as any });
       }
     });
     setIsEditCategoryOpen(false)
@@ -151,9 +157,9 @@ export default function ManageMenuPage() {
 
   const handleConfirmCategoryDelete = () => {
     let updatedCategories = categories.filter(c => c !== selectedCategory);
-    products.forEach(p => {
+    inventoryProducts.forEach(p => {
       if (p.category === selectedCategory) {
-        updateProduct(p.id, { category: "Uncategorized" });
+        updateProduct(p.id, { category: "Uncategorized" as any });
       }
     });
     if (!updatedCategories.includes("Uncategorized")) updatedCategories.push("Uncategorized");
@@ -171,14 +177,14 @@ export default function ManageMenuPage() {
       <SiteHeader>
         {/* --- LEFT SIDE: Breadcrumbs --- */}
         <div className="flex items-center gap-2">
-          <Breadcrumb className="hidden sm:block">
+          <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem>
                 <BreadcrumbLink asChild><Link to="/">POS</Link></BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
-                <BreadcrumbPage>Menu Management</BreadcrumbPage>
+                <BreadcrumbPage className="text-base font-semibold text-foreground">Menu Management</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
@@ -295,7 +301,7 @@ export default function ManageMenuPage() {
                         </TableCell>
                         <TableCell>
                           <div className="h-10 w-10 rounded-md overflow-hidden bg-muted">
-                            <img src={product.image} alt={product.name} className="h-full w-full object-cover pointer-events-none" />
+                            <img src={product.image || ""} alt={product.name} className="h-full w-full object-cover pointer-events-none" />
                           </div>
                         </TableCell>
                         <TableCell className="font-medium">{product.name}</TableCell>
@@ -350,7 +356,7 @@ export default function ManageMenuPage() {
                 </TableHeader>
                 <TableBody>
                   {categories.map((category) => {
-                    const itemCount = products.filter(p => p.category === category).length;
+                    const itemCount = inventoryProducts.filter(p => p.category === category).length;
                     return (
                       <TableRow 
                         key={category} 
@@ -436,10 +442,10 @@ export default function ManageMenuPage() {
       </AnimatePresence>
 
       {/* MODALS */}
-      <AddProductModal isOpen={isAddProductOpen} onOpenChange={setIsAddProductOpen} onAddProduct={handleAddProduct} categories={categories} />
+      <AddProductModal isOpen={isAddProductOpen} onOpenChange={setIsAddProductOpen} onAddProduct={handleAddProduct} />
       <EditProductModal isOpen={isEditProductOpen} onOpenChange={setIsEditProductOpen} product={selectedProduct} categories={categories} onSave={handleEditProduct} />
       <DeleteProductModal isOpen={isDeleteProductOpen} onOpenChange={setIsDeleteProductOpen} product={selectedProduct} onDeleteProduct={handleDeleteProduct} />
-      <AddCategoryModal isOpen={isAddCategoryOpen} onOpenChange={setIsAddCategoryOpen} onAddCategory={handleAddCategory} existingProducts={products as any} existingCategories={categories} />
+      <AddCategoryModal isOpen={isAddCategoryOpen} onOpenChange={setIsAddCategoryOpen} onAddCategory={handleAddCategory} existingProducts={inventoryProducts as any} existingCategories={categories} />
 
       <Dialog open={isEditCategoryOpen} onOpenChange={setIsEditCategoryOpen}>
         <DialogContent className="sm:max-w-md">

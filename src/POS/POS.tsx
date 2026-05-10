@@ -5,14 +5,14 @@ import { AddProductModal } from "@/POS/addProduct"
 import DeleteProductModal from "@/POS/deleteProduct"
 import { AddCategoryModal } from "@/POS/addCategory"
 import { ProductGrid } from "@/POS/items"
-import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { Plus, Search, X, ShoppingBag } from "lucide-react"
 import { Button } from "@/components/ui/button" 
-import { mockProducts as initialProducts } from "@/POS/products"
 import type { Product } from "@/hooks/useCart"
-import { Toaster } from "@/components/ui/sonner"
+import { Toaster, toast } from "sonner"
 import { SiteHeader } from "@/components/site-header"
+
+import { useInventory } from "@/hooks/useInventory"
 
 export default function Page() {
   const { 
@@ -20,11 +20,12 @@ export default function Page() {
     clearCart, subtotal, total 
   } = useCart()
 
+  const { products: inventoryProducts, addProduct, updateProduct, deleteProduct } = useInventory()
+
   const [isMobileTicketOpen, setIsMobileTicketOpen] = useState(false)
-  const [products, setProducts] = useState<Product[]>(initialProducts)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
-  const [productToDelete, setProductToDelete] = useState<Product | null>(null)
+  const [productToDelete, setProductToDelete] = useState<any>(null)
 
   const [categories, setCategories] = useState([
     "All", "Hot Coffee", "Iced Coffee", "Milk Tea", "Fruit Tea", "Pastries"
@@ -35,30 +36,40 @@ export default function Page() {
   
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false)
 
-  const handleProductAdded = (newProduct: Product) => {
-    setProducts([...products, newProduct])
+  // Map inventory products to POS structure
+  const products: Product[] = inventoryProducts.map(p => ({
+    id: p.id,
+    name: p.name,
+    price: p.variants[0]?.price || 0,
+    category: p.category,
+    image: p.image || undefined,
+    inStock: p.inStock
+  }))
+
+  const handleProductAdded = (productData: any) => {
+    addProduct(productData)
+    toast.success("Product added successfully")
   }
 
-  const handleStageForDeletion = (id: number, name: string) => {
+  const handleStageForDeletion = (id: string) => {
     const product = products.find(p => p.id === id) || null;
     setProductToDelete(product);
     setIsDeleteModalOpen(true);
   };
 
-  const handleConfirmDelete = (id: number) => {
-    setProducts((prevProducts) => prevProducts.filter((p) => p.id !== id));
+  const handleConfirmDelete = (id: string) => {
+    deleteProduct(id);
+    toast.success("Product deleted from inventory");
     setProductToDelete(null);
   };
 
-  const handleAddCategory = (newCategoryName: string, selectedProductIds: number[]) => {
+  const handleAddCategory = (newCategoryName: string, selectedProductIds: string[]) => {
     setCategories([...categories, newCategoryName])
 
     if (selectedProductIds.length > 0) {
-      setProducts(products.map(product => 
-        selectedProductIds.includes(product.id) 
-          ? { ...product, category: newCategoryName } 
-          : product
-      ))
+      selectedProductIds.forEach(id => {
+        updateProduct(id, { category: newCategoryName as any });
+      });
     }
   }
 
@@ -69,7 +80,7 @@ export default function Page() {
     return matchesCategory && matchesSearch;
   });
 
-  const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
 
   const totalCartItems = cart.reduce((total, item) => total + item.qty, 0);
 
@@ -224,7 +235,7 @@ export default function Page() {
       )}
 
       {/* MODALS */}
-      <AddProductModal isOpen={isAddModalOpen} onOpenChange={setIsAddModalOpen} onAddProduct={handleProductAdded} categories={categories} />
+      <AddProductModal isOpen={isAddModalOpen} onOpenChange={setIsAddModalOpen} onAddProduct={handleProductAdded} />
       <DeleteProductModal isOpen={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen} onDeleteProduct={handleConfirmDelete} product={productToDelete} />
       <AddCategoryModal isOpen={isAddCategoryOpen} onOpenChange={setIsAddCategoryOpen} onAddCategory={handleAddCategory} existingProducts={products} existingCategories={categories} />
 

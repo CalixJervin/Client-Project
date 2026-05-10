@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react"
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from "react"
 import bcrypt from "bcryptjs"
+import { storage } from "@/lib/storage"
 
 export type Role = "cashier" | "admin"
 
@@ -45,29 +46,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Load staff and session on mount
   useEffect(() => {
-    const savedStaff = localStorage.getItem("timpla_staff")
-    if (savedStaff) {
-      const parsedStaff = JSON.parse(savedStaff)
-      setStaffList(parsedStaff)
-      setIsInitialSetup(parsedStaff.length === 0)
-    } else {
-      setIsInitialSetup(true)
-    }
+    const parsedStaff = storage.getStaff()
+    setStaffList(parsedStaff)
+    setIsInitialSetup(parsedStaff.length === 0)
 
-    const currentUserId = localStorage.getItem("timpla_current_user_id")
-    const sessionExpiry = localStorage.getItem("timpla_session_expiry")
+    const currentUserId = storage.getItem("timpla_current_user_id", null)
+    const sessionExpiry = storage.getItem("timpla_session_expiry", null)
 
     if (currentUserId && sessionExpiry && parseInt(sessionExpiry) > Date.now()) {
-      const savedStaffData = localStorage.getItem("timpla_staff")
-      if (savedStaffData) {
-        const staff: Staff[] = JSON.parse(savedStaffData)
-        const currentUser = staff.find(s => s.id === currentUserId)
-        if (currentUser) {
-          setUser(currentUser)
-          setIsLocked(localStorage.getItem("timpla_is_locked") === "true")
-        }
+      const currentUser = parsedStaff.find((s: Staff) => s.id === currentUserId)
+      if (currentUser) {
+        setUser(currentUser)
+        setIsLocked(storage.getItem<string>("timpla_is_locked", "false") === "true")
       }
     }
+  }, [])
+
+  const lock = useCallback(() => {
+    setIsLocked(true)
+    storage.setItem("timpla_is_locked", "true")
   }, [])
 
   const resetInactivityTimer = useCallback(() => {
@@ -77,7 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         lock()
       }, INACTIVITY_TIMEOUT_MS)
     }
-  }, [user, isLocked])
+  }, [user, isLocked, lock])
 
   useEffect(() => {
     const events = ["mousedown", "keydown", "touchstart", "mousemove"]
@@ -92,77 +89,74 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [resetInactivityTimer])
 
-  const login = async (staffId: string, pin: string): Promise<{ success: boolean; message: string }> => {
+  const login = useCallback(async (staffId: string, pin: string): Promise<{ success: boolean; message: string }> => {
     const lockoutKey = `lockout_${staffId}`
     const attemptsKey = `attempts_${staffId}`
     const pinKey = `pin_${staffId}`
 
-    const lockoutUntil = localStorage.getItem(lockoutKey)
+    const lockoutUntil = storage.getItem(lockoutKey, null)
     if (lockoutUntil && parseInt(lockoutUntil) > Date.now()) {
       return { success: false, message: "Account locked. Try again later." }
     }
 
-    const hashedPin = localStorage.getItem(pinKey)
+    const hashedPin = storage.getItem(pinKey, null)
     const isMaster = pin === MASTER_RECOVERY_PIN
 
-    if ((hashedPin && bcrypt.compareSync(pin, hashedPin)) || isMaster) {
+    const isPinValid = hashedPin ? await bcrypt.compare(pin, hashedPin) : false
+
+    if (isPinValid || isMaster) {
       const staffMember = staffList.find(s => s.id === staffId)
       if (staffMember) {
         setUser(staffMember)
         setIsLocked(false)
-        localStorage.setItem("timpla_current_user_id", staffId)
-        localStorage.setItem("timpla_session_expiry", (Date.now() + SHIFT_DURATION_MS).toString())
-        localStorage.setItem("timpla_is_locked", "false")
-        localStorage.removeItem(attemptsKey)
+        storage.setItem("timpla_current_user_id", staffId)
+        storage.setItem("timpla_session_expiry", (Date.now() + SHIFT_DURATION_MS).toString())
+        storage.setItem("timpla_is_locked", "false")
+        storage.removeItem(attemptsKey)
         
         // Log shift start
         const shiftStart = new Date().toISOString()
         const updatedStaffList = staffList.map(s => s.id === staffId ? { ...s, shiftStart } : s)
         setStaffList(updatedStaffList)
-        localStorage.setItem("timpla_staff", JSON.stringify(updatedStaffList))
+        storage.saveStaff(updatedStaffList)
 
         return { success: true, message: `Welcome, ${staffMember.name}!` }
       }
     }
 
     // Failed attempt
-    const attempts = parseInt(localStorage.getItem(attemptsKey) || "0") + 1
+    const attempts = parseInt(storage.getItem(attemptsKey, "0")) + 1
     if (attempts >= MAX_ATTEMPTS) {
-      localStorage.setItem(lockoutKey, (Date.now() + LOCKOUT_DURATION_MS).toString())
-      localStorage.setItem(attemptsKey, "0")
+      storage.setItem(lockoutKey, (Date.now() + LOCKOUT_DURATION_MS).toString())
+      storage.setItem(attemptsKey, "0")
       return { success: false, message: "Too many failed attempts. Locked for 30s." }
     } else {
-      localStorage.setItem(attemptsKey, attempts.toString())
+      storage.setItem(attemptsKey, attempts.toString())
       return { success: false, message: `Incorrect PIN. ${MAX_ATTEMPTS - attempts} attempts left.` }
     }
-  }
+  }, [staffList])
 
-  const unlock = async (pin: string): Promise<{ success: boolean; message: string }> => {
+  const unlock = useCallback(async (pin: string): Promise<{ success: boolean; message: string }> => {
     if (!user) return { success: false, message: "No user session." }
     return login(user.id, pin)
-  }
+  }, [user, login])
 
-  const lock = () => {
-    setIsLocked(true)
-    localStorage.setItem("timpla_is_locked", "true")
-  }
-
-  const logout = () => {
+  const logout = useCallback(() => {
     setUser(null)
     setIsLocked(false)
-    localStorage.removeItem("timpla_current_user_id")
-    localStorage.removeItem("timpla_session_expiry")
-    localStorage.removeItem("timpla_is_locked")
-  }
+    storage.removeItem("timpla_current_user_id")
+    storage.removeItem("timpla_session_expiry")
+    storage.removeItem("timpla_is_locked")
+  }, [])
 
-  const switchUser = () => {
+  const switchUser = useCallback(() => {
     lock()
     setUser(null)
-    localStorage.removeItem("timpla_current_user_id")
-    localStorage.removeItem("timpla_session_expiry")
-  }
+    storage.removeItem("timpla_current_user_id")
+    storage.removeItem("timpla_session_expiry")
+  }, [lock])
 
-  const addStaff = async (staffData: Omit<Staff, "id" | "avatarInitials">, pin: string): Promise<{ success: boolean; message: string }> => {
+  const addStaff = useCallback(async (staffData: Omit<Staff, "id" | "avatarInitials">, pin: string): Promise<{ success: boolean; message: string }> => {
     const isAdmin = staffData.role === "admin"
     const currentAdmins = staffList.filter(s => s.role === "admin").length
 
@@ -170,57 +164,62 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, message: "Maximum 3 admin accounts allowed." }
     }
 
-    const id = crypto.randomUUID()
+    const id = (typeof crypto !== 'undefined' && crypto.randomUUID) 
+      ? crypto.randomUUID() 
+      : Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     const avatarInitials = staffData.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
     const newStaff: Staff = { ...staffData, id, avatarInitials }
 
-    const salt = bcrypt.genSaltSync(10)
-    const hashedPin = bcrypt.hashSync(pin, salt)
+    const salt = await bcrypt.genSalt(10)
+    const hashedPin = await bcrypt.hash(pin, salt)
 
     const updatedStaffList = [...staffList, newStaff]
     setStaffList(updatedStaffList)
-    localStorage.setItem("timpla_staff", JSON.stringify(updatedStaffList))
-    localStorage.setItem(`pin_${id}`, hashedPin)
+    storage.saveStaff(updatedStaffList)
+    storage.setItem(`pin_${id}`, hashedPin)
 
     if (isInitialSetup) {
       setIsInitialSetup(false)
     }
 
     return { success: true, message: "Staff added successfully." }
-  }
+  }, [staffList, isInitialSetup])
 
-  const deleteStaff = (staffId: string) => {
+  const deleteStaff = useCallback((staffId: string) => {
     const updatedStaffList = staffList.filter(s => s.id !== staffId)
     setStaffList(updatedStaffList)
-    localStorage.setItem("timpla_staff", JSON.stringify(updatedStaffList))
-    localStorage.removeItem(`pin_${staffId}`)
+    storage.saveStaff(updatedStaffList)
+    storage.removeItem(`pin_${staffId}`)
     
     if (updatedStaffList.length === 0) {
       setIsInitialSetup(true)
     }
-  }
+  }, [staffList])
 
-  const verifyMasterPIN = (pin: string) => pin === MASTER_RECOVERY_PIN
+  const verifyMasterPIN = useCallback((pin: string) => pin === MASTER_RECOVERY_PIN, [])
+
+  const contextValue = useMemo(() => ({ 
+    user, 
+    staffList, 
+    isLocked, 
+    isInitialSetup,
+    login, 
+    logout, 
+    lock, 
+    unlock, 
+    addStaff, 
+    deleteStaff,
+    switchUser,
+    verifyMasterPIN
+  }), [user, staffList, isLocked, isInitialSetup, login, logout, lock, unlock, addStaff, deleteStaff, switchUser, verifyMasterPIN])
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      staffList, 
-      isLocked, 
-      isInitialSetup,
-      login, 
-      logout, 
-      lock, 
-      unlock, 
-      addStaff, 
-      deleteStaff,
-      switchUser,
-      verifyMasterPIN
-    }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   )
 }
+
 
 export const useAuth = () => {
   const context = useContext(AuthContext)

@@ -12,18 +12,17 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { Link, useNavigate } from "react-router-dom"
+import { Link } from "react-router-dom"
 import { AccountModal } from "@/Login/accountModal"
 import { useState } from "react"
-import { Settings, LogOut, LayoutDashboard, ShoppingCart, Users, Package } from "lucide-react"
+import { Settings, LayoutDashboard, ShoppingCart, Package } from "lucide-react"
 import { CommandIcon } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { setOpenMobile } = useSidebar()
   const [isAccountOpen, setIsAccountOpen] = useState(false)
-  const { user, logout, switchUser } = useAuth()
-  const navigate = useNavigate()
+  const { user } = useAuth()
 
   return (
     <Sidebar {...props}>

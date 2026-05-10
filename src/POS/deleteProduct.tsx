@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 interface DeleteProductModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onDeleteProduct: (id: number) => void;
+  onDeleteProduct: (id: string) => void;
   product: Product | null;
 }
 

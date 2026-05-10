@@ -6,17 +6,8 @@ import { Button } from "@/components/ui/button";
 import { 
   Plus, 
   Edit, 
-  Trash2, 
-  ChevronRight, 
-  Info, 
-  ExternalLink 
+  Trash2
 } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { RecipeBuilder } from "./RecipeBuilder";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";

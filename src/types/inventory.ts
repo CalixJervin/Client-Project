@@ -40,15 +40,22 @@ export interface ProductVariant {
 
 export type ProductCategory = 'Drinks' | 'Food' | 'Pastries' | 'Add-ons';
 export type ProductAvailability = 'all-day' | 'morning' | 'weekend';
+export type ProductType = 'made-to-order' | 'ready-made';
 
 export interface Product {
   id: string;
   name: string;
   category: ProductCategory;
+  type: ProductType;
   variants: ProductVariant[];
   image?: string | null; // base64
   inStock: boolean;
   availability: ProductAvailability;
+  
+  // Ready-made specific fields
+  quantity?: number;
+  lowStockThreshold?: number;
+  restockLog?: RestockEntry[];
 }
 
 export interface Sale {

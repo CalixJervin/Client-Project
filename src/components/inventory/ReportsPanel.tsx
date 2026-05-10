@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { Sale, Ingredient, Product, Recipe } from "@/types/inventory";
+import type { Sale, Ingredient, Product } from "@/types/inventory";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Table, 
@@ -25,27 +25,7 @@ export function ReportsPanel({
   products
 }: ReportsPanelProps) {
   
-  // 1. Most Consumed Ingredients
-  const consumedIngredients = useMemo(() => {
-    const consumption: Record<string, number> = {};
-    
-    sales.forEach(sale => {
-      const product = products.find(p => p.id === sale.productId);
-      if (!product) return;
-      
-      const variant = product.variants[sale.variantIndex];
-      if (!variant || !variant.recipeId) return;
-      
-      // Note: This logic assumes we have access to recipes here. 
-      // I'll need to pass recipes as well or derive it.
-      // For now, I'll calculate it based on what I have.
-    });
-    
-    // Actually, I should pass recipes to this component for accurate calculation.
-    return [];
-  }, [sales, products]);
-
-  // 2. Restock History (Sorted by date)
+  // 1. Restock History (Sorted by date)
   const allRestocks = useMemo(() => {
     const restocks: any[] = [];
     ingredients.forEach(ing => {
@@ -61,7 +41,7 @@ export function ReportsPanel({
     return restocks.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [ingredients]);
 
-  // 3. Products Sold Count
+  // 2. Products Sold Count
   const productSales = useMemo(() => {
     const counts: Record<string, { name: string, count: number, revenue: number }> = {};
     sales.forEach(sale => {
@@ -96,7 +76,7 @@ export function ReportsPanel({
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                 />
                 <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                  {productSales.map((entry, index) => (
+                  {productSales.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Bar>

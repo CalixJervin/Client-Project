@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import type { Ingredient, Recipe, RecipeIngredient } from "@/types/inventory";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Plus, Trash2, Save, X } from "lucide-react";
+import { Plus, Trash2, Save } from "lucide-react";
 
 interface RecipeBuilderProps {
   ingredients: Ingredient[];
@@ -86,7 +86,6 @@ export function RecipeBuilder({
         
         <div className="space-y-2 max-h-[300px] overflow-auto pr-1">
           {recipeIngredients.map((ri, index) => {
-            const selectedIng = ingredients.find(i => i.id === ri.ingredientId);
             return (
               <div key={index} className="flex gap-2 items-start">
                 <div className="flex-1">

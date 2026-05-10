@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
-import { Delete, ArrowLeft, ShieldAlert, Coffee, Clock, UserPlus, LogIn, LayoutDashboard, ShoppingCart } from "lucide-react"
+import { Delete, ArrowLeft, ShieldAlert, Coffee, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Toaster, toast } from "sonner"
@@ -24,6 +24,7 @@ export default function LoginPage() {
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null)
   const [pin, setPin] = useState("")
   const [isVerifying, setIsVerifying] = useState(false)
+  const [isOnboarding, setIsOnboarding] = useState(false)
 
   // Onboarding State
   const [adminName, setAdminName] = useState("")
@@ -62,23 +63,27 @@ export default function LoginPage() {
     if (!selectedStaff || pin.length < 4) return
     
     setIsVerifying(true)
-    const result = isLocked && user?.id === selectedStaff.id 
-      ? await unlock(pin)
-      : await login(selectedStaff.id, pin)
-    
-    setIsVerifying(false)
-    
-    if (result.success) {
-      toast.success(result.message)
-      setPin("")
-      if (selectedStaff.role === "admin") {
-        navigate("/dashboard")
+    try {
+      const result = isLocked && user?.id === selectedStaff.id 
+        ? await unlock(pin)
+        : await login(selectedStaff.id, pin)
+      
+      if (result.success) {
+        toast.success(result.message)
+        setPin("")
+        if (selectedStaff.role === "admin") {
+          navigate("/dashboard")
+        } else {
+          navigate("/")
+        }
       } else {
-        navigate("/")
+        toast.error(result.message)
+        setPin("")
       }
-    } else {
-      toast.error(result.message)
-      setPin("")
+    } catch (error) {
+      toast.error("An unexpected error occurred during login")
+    } finally {
+      setIsVerifying(false)
     }
   }, [selectedStaff, pin, isLocked, user, unlock, login, navigate])
 
@@ -122,20 +127,27 @@ export default function LoginPage() {
     if (adminPin.length < 4) return toast.error("PIN must be at least 4 digits")
     if (adminPin !== confirmPin) return toast.error("PINs do not match")
 
-    const result = await addStaff({
-      name: adminName.trim(),
-      role: "admin",
-      avatarColor: "bg-primary"
-    }, adminPin)
+    setIsOnboarding(true)
+    try {
+      const result = await addStaff({
+        name: adminName.trim(),
+        role: "admin",
+        avatarColor: "bg-primary"
+      }, adminPin)
 
-    if (result.success) {
-      toast.success("Admin account created! Please login.")
-      setAdminName("")
-      setAdminPin("")
-      setConfirmPin("")
-      setView("select")
-    } else {
-      toast.error(result.message)
+      if (result.success) {
+        toast.success("Admin account created! Please login.")
+        setAdminName("")
+        setAdminPin("")
+        setConfirmPin("")
+        setView("select")
+      } else {
+        toast.error(result.message)
+      }
+    } catch (error) {
+      toast.error("Failed to create admin account")
+    } finally {
+      setIsOnboarding(false)
     }
   }
 
@@ -170,6 +182,7 @@ export default function LoginPage() {
                       value={adminName} 
                       onChange={(e) => setAdminName(e.target.value)}
                       className="h-12"
+                      disabled={isOnboarding}
                     />
                   </div>
                   <div className="space-y-2">
@@ -177,10 +190,12 @@ export default function LoginPage() {
                     <Input 
                       type="password" 
                       inputMode="numeric"
+                      pattern="[0-9]*"
                       placeholder="••••" 
                       value={adminPin} 
                       onChange={(e) => setAdminPin(e.target.value.replace(/[^0-9]/g, ''))}
                       className="h-12 text-center tracking-widest"
+                      disabled={isOnboarding}
                     />
                   </div>
                   <div className="space-y-2">
@@ -188,14 +203,20 @@ export default function LoginPage() {
                     <Input 
                       type="password" 
                       inputMode="numeric"
+                      pattern="[0-9]*"
                       placeholder="••••" 
                       value={confirmPin} 
                       onChange={(e) => setConfirmPin(e.target.value.replace(/[^0-9]/g, ''))}
                       className="h-12 text-center tracking-widest"
+                      disabled={isOnboarding}
                     />
                   </div>
-                  <Button className="w-full h-14 text-lg mt-6" onClick={handleOnboarding}>
-                    Create Admin Account
+                  <Button 
+                    className="w-full h-14 text-lg mt-6" 
+                    onClick={handleOnboarding}
+                    disabled={isOnboarding}
+                  >
+                    {isOnboarding ? "Creating Account..." : "Create Admin Account"}
                   </Button>
                 </div>
               </motion.div>

@@ -1,10 +1,6 @@
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
-import { useAuth } from "@/hooks/use-auth"
-import React from "react"
-
 export function SiteHeader({ children }: { children?: React.ReactNode }) {
-  const { user } = useAuth()
   
   return (
     <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-16 sticky top-0 z-20">

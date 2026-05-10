@@ -12,7 +12,7 @@ export interface Transaction {
 export interface TransactionItem {
   id: string;
   transaction_id: string;
-  product_id: number;
+  product_id: string;
   product_name: string;
   quantity: number;
   price: number;

@@ -42,7 +42,6 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Label } from "@/components/ui/label"
@@ -62,7 +61,29 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { GripVerticalIcon, EllipsisVerticalIcon, Columns3Icon, ChevronDownIcon, ChevronsLeftIcon, ChevronLeftIcon, ChevronRightIcon, ChevronsRightIcon, CircleCheckIcon, Clock } from "lucide-react"
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription,
+  DialogFooter
+} from "@/components/ui/dialog"
+import { 
+  GripVerticalIcon, 
+  EllipsisVerticalIcon, 
+  Columns3Icon, 
+  ChevronDownIcon, 
+  ChevronsLeftIcon, 
+  ChevronLeftIcon, 
+  ChevronRightIcon, 
+  ChevronsRightIcon, 
+  CircleCheckIcon, 
+  Package,
+  CreditCard,
+  History
+} from "lucide-react"
+import { format } from "date-fns"
 
 export interface TransactionRow {
   id: string
@@ -94,119 +115,6 @@ function DragHandle({ id }: { id: string }) {
   )
 }
 
-const columns: ColumnDef<TransactionRow>[] = [
-  {
-    id: "drag",
-    header: () => null,
-    cell: ({ row }) => <DragHandle id={row.original.id} />,
-  },
-  {
-    id: "select",
-    header: ({ table }) => (
-      <div className="flex items-center justify-center">
-        <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      </div>
-    ),
-    cell: ({ row }) => (
-      <div className="flex items-center justify-center">
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      </div>
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
-    accessorKey: "order_id",
-    header: "Order ID",
-    cell: ({ row }) => (
-      <span className="font-bold text-foreground">{row.original.order_id}</span>
-    ),
-    enableHiding: false,
-  },
-  {
-    accessorKey: "timestamp",
-    header: "Time",
-    cell: ({ row }) => {
-      const date = new Date(row.original.timestamp)
-      const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      return (
-        <span className="text-muted-foreground font-medium">
-          {timeStr}
-        </span>
-      )
-    },
-  },
-  {
-    accessorKey: "payment_method",
-    header: "Payment Status",
-    cell: ({ row }) => {
-      const method = row.original.payment_method || 'Unknown'
-      const label = `Paid (${method.toUpperCase()})`
-      return (
-        <Badge variant="outline" className="px-1.5 font-medium border-green-200 bg-green-50/50 text-green-700 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
-          <CircleCheckIcon className="size-3 fill-current mr-1" />
-          {label}
-        </Badge>
-      )
-    },
-  },
-  {
-    accessorKey: "items_summary",
-    header: "Items",
-    cell: ({ row }) => (
-      <div className="flex flex-col py-1">
-        <span className="font-medium text-sm">{row.original.items_count} items</span>
-        <span className="text-xs text-muted-foreground whitespace-pre-wrap break-words">
-          {row.original.items_summary}
-        </span>
-      </div>
-    ),
-  },
-  {
-    accessorKey: "total_amount",
-    header: () => <div className="w-full text-right">Total Amount</div>,
-    cell: ({ row }) => (
-      <div className="w-full text-right font-bold text-lg text-foreground">
-        ₱{row.original.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-      </div>
-    ),
-  },
-  {
-    id: "actions",
-    cell: () => (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className="flex size-8 text-muted-foreground data-[state=open]:bg-muted"
-            size="icon"
-          >
-            <EllipsisVerticalIcon />
-            <span className="sr-only">Open menu</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-32">
-          <DropdownMenuItem>View Details</DropdownMenuItem>
-          <DropdownMenuItem>Print Receipt</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive">Refund Order</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    ),
-  },
-]
-
 function DraggableRow({ row }: { row: Row<TransactionRow> }) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({
     id: row.original.id,
@@ -234,6 +142,7 @@ function DraggableRow({ row }: { row: Row<TransactionRow> }) {
 
 export function DataTable() {
   const { transactions, transactionItems } = useTransactions()
+  const [selectedTransactionId, setSelectedTransactionId] = React.useState<string | null>(null)
   
   const data = React.useMemo(() => {
     return transactions.map(t => {
@@ -252,6 +161,126 @@ export function DataTable() {
       }
     })
   }, [transactions, transactionItems])
+
+  const selectedTransaction = React.useMemo(() => 
+    transactions.find(t => t.id === selectedTransactionId),
+  [transactions, selectedTransactionId])
+
+  const selectedItems = React.useMemo(() => 
+    transactionItems.filter(i => i.transaction_id === selectedTransactionId),
+  [transactionItems, selectedTransactionId])
+
+  const columns: ColumnDef<TransactionRow>[] = React.useMemo(() => [
+    {
+      id: "drag",
+      header: () => null,
+      cell: ({ row }) => <DragHandle id={row.original.id} />,
+    },
+    {
+      id: "select",
+      header: ({ table }) => (
+        <div className="flex items-center justify-center">
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="Select all"
+          />
+        </div>
+      ),
+      cell: ({ row }) => (
+        <div className="flex items-center justify-center">
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+          />
+        </div>
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
+    {
+      accessorKey: "order_id",
+      header: "Order ID",
+      cell: ({ row }) => (
+        <span className="font-bold text-foreground">{row.original.order_id}</span>
+      ),
+      enableHiding: false,
+    },
+    {
+      accessorKey: "timestamp",
+      header: "Time",
+      cell: ({ row }) => {
+        const date = new Date(row.original.timestamp)
+        const timeStr = format(date, "hh:mm a")
+        return (
+          <span className="text-muted-foreground font-medium">
+            {timeStr}
+          </span>
+        )
+      },
+    },
+    {
+      accessorKey: "payment_method",
+      header: "Payment Status",
+      cell: ({ row }) => {
+        const method = row.original.payment_method || 'Unknown'
+        const label = `Paid (${method.toUpperCase()})`
+        return (
+          <Badge variant="outline" className="px-1.5 font-medium border-green-200 bg-green-50/50 text-green-700 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
+            <CircleCheckIcon className="size-3 fill-current mr-1" />
+            {label}
+          </Badge>
+        )
+      },
+    },
+    {
+      accessorKey: "items_summary",
+      header: "Items",
+      cell: ({ row }) => (
+        <div className="flex flex-col py-1 max-w-[120px] sm:max-w-none">
+          <span className="font-medium text-sm">{row.original.items_count} items</span>
+          <span className="text-xs text-muted-foreground truncate sm:whitespace-pre-wrap sm:overflow-visible">
+            {row.original.items_summary}
+          </span>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "total_amount",
+      header: () => <div className="w-full text-right">Total Amount</div>,
+      cell: ({ row }) => (
+        <div className="w-full text-right font-bold text-lg text-foreground">
+          ₱{row.original.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+        </div>
+      ),
+    },
+    {
+      id: "actions",
+      cell: ({ row }) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="flex size-8 text-muted-foreground data-[state=open]:bg-muted"
+              size="icon"
+            >
+              <EllipsisVerticalIcon className="size-4" />
+              <span className="sr-only">Open menu</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-32">
+            <DropdownMenuItem onClick={() => setSelectedTransactionId(row.original.id)}>
+              View Details
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ], [])
 
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
@@ -358,8 +387,8 @@ export function DataTable() {
         </div>
       </div>
 
-      <div className="px-4 lg:px-6">
-        <div className="overflow-hidden rounded-xl border bg-card">
+      <div className="px-4 lg:px-6 overflow-x-auto">
+        <div className="overflow-hidden rounded-xl border bg-card min-w-[600px] md:min-w-0">
           <DndContext
             collisionDetection={closestCenter}
             modifiers={[restrictToVerticalAxis]}
@@ -491,6 +520,74 @@ export function DataTable() {
           </div>
         </div>
       </div>
+
+      {/* Transaction Detail Dialog */}
+      <Dialog open={!!selectedTransactionId} onOpenChange={(open) => !open && setSelectedTransactionId(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="size-5 text-primary" />
+              Order Details {selectedTransaction?.order_id}
+            </DialogTitle>
+            <DialogDescription>
+              Transaction processed on {selectedTransaction && format(new Date(selectedTransaction.timestamp), "MMM d, yyyy · hh:mm a")}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Status & Method */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-3 bg-muted/50 rounded-lg space-y-1">
+                <p className="text-[10px] font-bold uppercase text-muted-foreground">Payment Method</p>
+                <div className="flex items-center gap-2">
+                  <CreditCard className="size-4 text-muted-foreground" />
+                  <span className="font-bold capitalize">{selectedTransaction?.payment_method}</span>
+                </div>
+              </div>
+              <div className="p-3 bg-muted/50 rounded-lg space-y-1">
+                <p className="text-[10px] font-bold uppercase text-muted-foreground">Status</p>
+                <div className="flex items-center gap-1 text-green-600">
+                  <CircleCheckIcon className="size-4 fill-current" />
+                  <span className="font-bold">Completed</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Items List */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-bold uppercase text-muted-foreground tracking-wider">
+                <Package className="size-4" />
+                Items Summary
+              </div>
+              <div className="border rounded-xl divide-y bg-card overflow-hidden">
+                {selectedItems.map((item) => (
+                  <div key={item.id} className="p-3 flex justify-between items-center hover:bg-muted/30 transition-colors">
+                    <div className="flex flex-col">
+                      <span className="font-bold text-sm">{item.product_name}</span>
+                      <span className="text-xs text-muted-foreground">₱{item.price.toFixed(2)} × {item.quantity}</span>
+                    </div>
+                    <span className="font-black">₱{(item.price * item.quantity).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Total */}
+            <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl flex justify-between items-center">
+              <span className="text-lg font-bold">Total Amount</span>
+              <span className="text-2xl font-black text-primary">
+                ₱{selectedTransaction?.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setSelectedTransactionId(null)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

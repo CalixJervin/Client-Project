@@ -20,16 +20,20 @@ export default function Page() {
     clearCart, subtotal, total 
   } = useCart()
 
-  const { products: inventoryProducts, addProduct, updateProduct, deleteProduct } = useInventory()
+  const { 
+    products: inventoryProducts, 
+    addProduct, 
+    updateProduct, 
+    deleteProduct,
+    categories,
+    addCategory
+  } = useInventory()
 
   const [isMobileTicketOpen, setIsMobileTicketOpen] = useState(false)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [productToDelete, setProductToDelete] = useState<any>(null)
 
-  const [categories, setCategories] = useState([
-    "All", "Hot Coffee", "Iced Coffee", "Milk Tea", "Fruit Tea", "Pastries"
-  ])
   const [activeCategory, setActiveCategory] = useState("All")
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
@@ -43,7 +47,9 @@ export default function Page() {
     price: p.variants[0]?.price || 0,
     category: p.category,
     image: p.image || undefined,
-    inStock: p.inStock
+    inStock: p.inStock,
+    variantId: p.variants[0]?.id as any, // ID from product_variants table
+    size: p.variants[0]?.size || "Regular"
   }))
 
   const handleProductAdded = (productData: any) => {
@@ -51,20 +57,23 @@ export default function Page() {
     toast.success("Product added successfully")
   }
 
-  const handleStageForDeletion = (id: string) => {
+  const handleStageForDeletion = (id: string, _name: string) => {
     const product = products.find(p => p.id === id) || null;
     setProductToDelete(product);
     setIsDeleteModalOpen(true);
   };
 
-  const handleConfirmDelete = (id: string) => {
-    deleteProduct(id);
-    toast.success("Product deleted from inventory");
-    setProductToDelete(null);
+  const handleConfirmDelete = async (id: string) => {
+    try {
+      await deleteProduct(id);
+      setProductToDelete(null);
+    } catch (error) {
+      console.error("Failed to delete product:", error);
+    }
   };
 
   const handleAddCategory = (newCategoryName: string, selectedProductIds: string[]) => {
-    setCategories([...categories, newCategoryName])
+    addCategory(newCategoryName)
 
     if (selectedProductIds.length > 0) {
       selectedProductIds.forEach(id => {
@@ -72,6 +81,8 @@ export default function Page() {
       });
     }
   }
+
+  const allCategories = ["All", ...categories];
 
   const filteredProducts = products.filter((product) => {
     const matchesCategory = activeCategory === "All" || product.category === activeCategory;
@@ -167,7 +178,7 @@ export default function Page() {
         {/* Scrollable Categories & Products Area */}
         <div className="flex-1 flex flex-col gap-4 p-4 overflow-y-auto">
           <div className="flex w-full overflow-x-auto pb-2 gap-2 scrollbar-hide shrink-0">
-            {categories.map((cat) => (
+            {allCategories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}

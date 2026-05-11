@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
-import { useInventory } from "@/hooks/useInventory";
 
 interface TicketSidebarProps {
   cart: CartItem[];
@@ -38,7 +37,6 @@ export function TicketSidebar({
   
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "gcash">("cash");
   const { saveTransaction } = useTransactions();
-  const { processSale, products: inventoryProducts } = useInventory();
 
   const change = typeof amountReceived === "number" ? amountReceived - total : 0;
   
@@ -46,15 +44,6 @@ export function TicketSidebar({
 
   const handleCompleteTransaction = () => {
     if (isSufficient) {
-      // Auto-deduction logic
-      cart.forEach(item => {
-        // Try to find a matching product in inventory by name or ID
-        const invProduct = inventoryProducts.find(p => p.name === item.name || p.id === String(item.id));
-        if (invProduct) {
-          processSale(invProduct.id, 0, item.qty);
-        }
-      });
-
       saveTransaction(cart, subtotal, paymentMethod);
       clearCart();
       setIsCheckoutOpen(false);

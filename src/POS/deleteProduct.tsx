@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 interface DeleteProductModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onDeleteProduct: (id: string) => void;
+  onDeleteProduct: (id: string) => Promise<void>;
   product: Product | null;
 }
 
@@ -22,15 +22,15 @@ export default function DeleteProductModal({
     onDeleteProduct, 
     product }: DeleteProductModalProps) {
 
-const handleDeleteitem = () => {
+const handleDeleteitem = async () => {
     if (!product) return;
 
-    onDeleteProduct(product!.id);
-
-    toast.success(`Deleted ${product.name}`, {
-    description: `Category: ${product.category} | Price: ₱${product.price}`,
-    });
-    onOpenChange(false);
+    try {
+        await onDeleteProduct(product.id);
+        onOpenChange(false);
+    } catch (error) {
+        console.error("Failed to delete product:", error);
+    }
 }
         return(
         <Dialog open={isOpen} onOpenChange={onOpenChange}>

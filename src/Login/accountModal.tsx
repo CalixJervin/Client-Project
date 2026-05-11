@@ -6,21 +6,16 @@ import { DialogFooter } from "@/components/ui/dialog";
 import { Trash2, Plus, ShieldAlert, Coffee, KeyRound, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import bcrypt from "bcryptjs";
-
-interface Staff {
-  id: string
-  name: string
-  role: "barista" | "admin"
-  avatarInitials: string
-}
+import { useAuth, type Staff } from "@/hooks/use-auth";
+import { supabase } from "@/lib/supabase";
 
 export function AccountModal({ isOpen, onOpenChange }: { isOpen: boolean, onOpenChange: (o: boolean) => void }) {
-  const [staffList, setStaffList] = useState<Staff[]>([]);
+  const { staffList, user, addStaff, deleteStaff } = useAuth();
   const [view, setView] = useState<"list" | "add" | "change-pin">("list");
   
   // States for Add
   const [newName, setNewName] = useState("");
-  const [newRole, setNewRole] = useState<"barista" | "admin">("barista");
+  const [newRole, setNewRole] = useState<"cashier" | "admin">("cashier");
   const [newPin, setNewPin] = useState("");
 
   // States for Deletion
@@ -34,61 +29,80 @@ export function AccountModal({ isOpen, onOpenChange }: { isOpen: boolean, onOpen
 
   useEffect(() => {
     if (isOpen) {
-      const saved = localStorage.getItem("timpla_staff");
-      if (saved) setStaffList(JSON.parse(saved));
       setView("list");
     }
   }, [isOpen]);
 
   const handleDelete = (id: string, name: string) => {
-    if (id === localStorage.getItem("timpla_current_user_id")) {
+    if (id === user?.id) {
       return toast.error("You cannot delete your own account while logged in.");
     }
     setStaffToDelete({ id, name });
     setIsDeleteConfirmOpen(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!staffToDelete) return;
-    const { id, name } = staffToDelete;
-    const updated = staffList.filter(s => s.id !== id);
-    setStaffList(updated);
-    localStorage.setItem("timpla_staff", JSON.stringify(updated));
-    localStorage.removeItem(`${id}_pin`);
-    toast.success(`${name} deleted.`);
-    setIsDeleteConfirmOpen(false);
-    setStaffToDelete(null);
+    try {
+      await deleteStaff(staffToDelete.id);
+      toast.success(`${staffToDelete.name} deleted.`);
+      setIsDeleteConfirmOpen(false);
+      setStaffToDelete(null);
+    } catch (error) {
+      toast.error("Failed to delete staff member");
+    }
   };
 
-  const handleAddAccount = () => {
+  const handleAddAccount = async () => {
     if (!newName.trim()) return toast.error("Name required");
-    if (newPin.length !== 4) return toast.error("PIN must be 4 digits");
+    if (newPin.length < 4) return toast.error("PIN must be at least 4 digits");
 
-    const newId = `${newRole}-${Date.now()}`;
-    const newAccount: Staff = { id: newId, name: newName.trim(), role: newRole, avatarInitials: newName.substring(0, 2).toUpperCase() };
+    const result = await addStaff({
+      name: newName.trim(),
+      role: newRole,
+      avatarColor: "bg-primary"
+    }, newPin);
     
-    const updated = [...staffList, newAccount];
-    setStaffList(updated);
-    localStorage.setItem("timpla_staff", JSON.stringify(updated));
-    localStorage.setItem(`${newId}_pin`, bcrypt.hashSync(newPin, bcrypt.genSaltSync(10)));
-    
-    toast.success(`${newName} added!`);
-    setNewName(""); setNewPin(""); setView("list");
+    if (result.success) {
+      toast.success(`${newName} added!`);
+      setNewName(""); setNewPin(""); setView("list");
+    } else {
+      toast.error(result.message);
+    }
   };
 
-  const handleChangePin = () => {
+  const handleChangePin = async () => {
     if (!selectedStaff) return;
-    if (updatedPin.length !== 4) return toast.error("New PIN must be 4 digits");
+    if (updatedPin.length < 4) return toast.error("New PIN must be at least 4 digits");
 
-    const savedHash = localStorage.getItem(`${selectedStaff.id}_pin`);
-    if (!savedHash || !bcrypt.compareSync(currentPin, savedHash)) {
+    const { data: staffData, error } = await supabase
+      .from('staff')
+      .select('pin_hash')
+      .eq('id', selectedStaff.id)
+      .single();
+
+    if (error || !staffData) {
+      return toast.error("Staff member not found.");
+    }
+
+    if (!bcrypt.compareSync(currentPin, staffData.pin_hash)) {
       return toast.error("Current PIN is incorrect.");
     }
 
-    localStorage.setItem(`${selectedStaff.id}_pin`, bcrypt.hashSync(updatedPin, bcrypt.genSaltSync(10)));
-    toast.success("PIN updated securely!");
-    
-    setCurrentPin(""); setUpdatedPin(""); setSelectedStaff(null); setView("list");
+    const salt = await bcrypt.genSalt(10);
+    const pin_hash = await bcrypt.hash(updatedPin, salt);
+
+    const { error: updateError } = await supabase
+      .from('staff')
+      .update({ pin_hash })
+      .eq('id', selectedStaff.id);
+
+    if (updateError) {
+      toast.error("Failed to update PIN");
+    } else {
+      toast.success("PIN updated securely!");
+      setCurrentPin(""); setUpdatedPin(""); setSelectedStaff(null); setView("list");
+    }
   };
 
   return (
@@ -144,11 +158,11 @@ export function AccountModal({ isOpen, onOpenChange }: { isOpen: boolean, onOpen
               <div className="space-y-2">
                 <label className="text-sm font-medium">Role</label>
                 <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-lg">
-                  <Button variant="ghost" onClick={() => setNewRole("barista")} className={`rounded-md ${newRole === "barista" ? "bg-background shadow-sm" : "text-muted-foreground"}`}>Cashier</Button>
+                  <Button variant="ghost" onClick={() => setNewRole("cashier")} className={`rounded-md ${newRole === "cashier" ? "bg-background shadow-sm" : "text-muted-foreground"}`}>Cashier</Button>
                   <Button variant="ghost" onClick={() => setNewRole("admin")} className={`rounded-md ${newRole === "admin" ? "bg-background shadow-sm" : "text-muted-foreground"}`}>Admin</Button>
                 </div>
               </div>
-              <div className="space-y-2"><label className="text-sm font-medium">4-Digit PIN</label><Input type="password" inputMode="numeric" maxLength={4} value={newPin} onChange={e => setNewPin(e.target.value.replace(/\D/g, ''))} /></div>
+              <div className="space-y-2"><label className="text-sm font-medium">PIN (4-6 digits)</label><Input type="password" inputMode="numeric" value={newPin} onChange={e => setNewPin(e.target.value.replace(/\D/g, ''))} /></div>
               <Button className="mt-2" onClick={handleAddAccount}>Save Account</Button>
             </div>
           )}
@@ -160,8 +174,8 @@ export function AccountModal({ isOpen, onOpenChange }: { isOpen: boolean, onOpen
                 <ArrowLeft className="mr-2 h-4 w-4" /> Back to Team
               </Button>
               <h3 className="font-semibold text-lg border-b pb-2">Change PIN for {selectedStaff.name}</h3>
-              <div className="space-y-2"><label className="text-sm font-medium">Current PIN</label><Input type="password" inputMode="numeric" maxLength={4} value={currentPin} onChange={e => setCurrentPin(e.target.value.replace(/\D/g, ''))} /></div>
-              <div className="space-y-2"><label className="text-sm font-medium">New 4-Digit PIN</label><Input type="password" inputMode="numeric" maxLength={4} value={updatedPin} onChange={e => setUpdatedPin(e.target.value.replace(/\D/g, ''))} /></div>
+              <div className="space-y-2"><label className="text-sm font-medium">Current PIN</label><Input type="password" inputMode="numeric" value={currentPin} onChange={e => setCurrentPin(e.target.value.replace(/\D/g, ''))} /></div>
+              <div className="space-y-2"><label className="text-sm font-medium">New PIN (4-6 digits)</label><Input type="password" inputMode="numeric" value={updatedPin} onChange={e => setUpdatedPin(e.target.value.replace(/\D/g, ''))} /></div>
               <Button className="mt-2" onClick={handleChangePin}>Update Security PIN</Button>
             </div>
           )}

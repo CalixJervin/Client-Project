@@ -33,6 +33,7 @@ export interface Recipe {
 }
 
 export interface ProductVariant {
+  id: string;
   size: string;
   price: number;
   recipeId: string | null;

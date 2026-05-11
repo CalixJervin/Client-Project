@@ -3,8 +3,21 @@ import { DataTable } from "@/components/data-table"
 import { SectionCards } from "@/components/section-cards"
 import { SiteHeader } from "@/components/site-header"
 import { StaffManagement } from "@/components/staff-management"
+import { useTransactions } from "./hooks/useTransactions"
+import { useInventory } from "./context/InventoryContext"
 
 export default function Page() {
+  const { isLoading: txLoading } = useTransactions()
+  const { isLoading: invLoading } = useInventory()
+
+  if (txLoading || invLoading) {
+    return (
+      <div className="flex flex-1 items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-1 flex-col overflow-auto">
       <SiteHeader>

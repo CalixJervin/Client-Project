@@ -18,10 +18,18 @@ import DeleteProductModal from "@/POS/deleteProduct"
 import { AddCategoryModal } from "@/POS/addCategory"
 
 import { useInventory } from "@/hooks/useInventory"
+import { generateId } from "@/lib/utils"
 
 export default function ManageMenuPage() {
-  const { products: inventoryProducts, addProduct, updateProduct, deleteProduct } = useInventory()
-  const [categories, setCategories] = useState(["Hot Coffee", "Iced Coffee", "Milk Tea", "Fruit Tea", "Pastries"])
+  const { 
+    products: inventoryProducts, 
+    addProduct, 
+    updateProduct, 
+    deleteProduct,
+    categories,
+    addCategory,
+    deleteCategory
+  } = useInventory()
   const [searchQuery, setSearchQuery] = useState("")
 
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false)
@@ -78,26 +86,28 @@ export default function ManageMenuPage() {
     setIsBulkDeleteConfirmOpen(true);
   }
 
-  const handleConfirmBulkDelete = () => {
-    if (activeTab === "products") {
-      selectedProductIds.forEach(id => deleteProduct(id));
-      setSelectedProductIds([]);
-      toast.success(`${selectedProductIds.length} products deleted.`);
-    } else {
-      let updatedCategories = categories.filter(c => !selectedCategoryNames.includes(c));
-      inventoryProducts.forEach(p => {
-        if (selectedCategoryNames.includes(p.category)) {
-          updateProduct(p.id, { category: "Uncategorized" as any });
-        }
-      });
-      if (!updatedCategories.includes("Uncategorized")) updatedCategories.push("Uncategorized");
-      setCategories(updatedCategories);
-      setSelectedCategoryNames([]);
-      toast.success(`${selectedCategoryNames.length} categories deleted.`);
-    }
-    setIsBulkDeleteConfirmOpen(false);
-  }
+  const handleConfirmBulkDelete = async () => {
+    try {
+      if (activeTab === "products") {
+        await Promise.all(selectedProductIds.map(id => deleteProduct(id)));
+        setSelectedProductIds([]);
+      } else {
+        const updates = inventoryProducts
+          .filter(p => selectedCategoryNames.includes(p.category))
+          .map(p => updateProduct(p.id, { category: "Uncategorized" as any }));
 
+        await Promise.all(updates);
+
+        selectedCategoryNames.forEach(name => deleteCategory(name));
+        
+        setSelectedCategoryNames([]);
+        toast.success(`${selectedCategoryNames.length} categories deleted.`);
+      }
+      setIsBulkDeleteConfirmOpen(false);
+    } catch (error) {
+      console.error("Bulk action failed:", error);
+    }
+  }
   const handleBulkEdit = () => {
     if (activeTab === "products" && selectedProductIds.length === 1) {
       const product = inventoryProducts.find(p => p.id === selectedProductIds[0]);
@@ -114,58 +124,61 @@ export default function ManageMenuPage() {
   }
 
   // --- STANDARD HANDLERS ---
-  const handleAddProduct = (productData: any) => {
-    addProduct(productData)
+  const handleAddProduct = async (productData: any) => {
+    await addProduct(productData)
     toast.success("Product added successfully")
   }
-  const handleEditProduct = (updatedProduct: any) => {
-    updateProduct(updatedProduct.id, {
+  const handleEditProduct = async (updatedProduct: any) => {
+    await updateProduct(updatedProduct.id, {
       name: updatedProduct.name,
       category: updatedProduct.category,
-      variants: [{ size: 'Regular', price: updatedProduct.price, recipeId: null }],
+      variants: [{ id: generateId(), size: 'Regular', price: updatedProduct.price, recipeId: null }],
       image: updatedProduct.image
     })
     setSelectedProductIds([]);
     toast.success(`${updatedProduct.name} updated!`)
   }
-  const handleDeleteProduct = (id: string) => {
-    deleteProduct(id)
-    toast.success("Product deleted.")
+  const handleDeleteProduct = async (id: string) => {
+    await deleteProduct(id)
   }
 
-  const handleAddCategory = (newCategory: string, selectedIds: any[]) => {
-    setCategories([...categories, newCategory])
+  const handleAddCategory = async (newCategory: string, selectedIds: any[]) => {
+    addCategory(newCategory)
     if (selectedIds.length > 0) {
-      selectedIds.forEach(id => updateProduct(id, { category: newCategory as any }))
+      await Promise.all(selectedIds.map(id => updateProduct(id, { category: newCategory as any })))
     }
     toast.success(`${newCategory} created!`)
   }
   
-  const handleSaveCategoryEdit = () => {
+  const handleSaveCategoryEdit = async () => {
     if (!newCategoryName || newCategoryName === selectedCategory) {
       setIsEditCategoryOpen(false);
       return;
     }
-    setCategories(categories.map(c => c === selectedCategory ? newCategoryName : c))
-    inventoryProducts.forEach(p => {
-      if (p.category === selectedCategory) {
-        updateProduct(p.id, { category: newCategoryName as any });
-      }
-    });
+    
+    // Rename logic
+    deleteCategory(selectedCategory);
+    addCategory(newCategoryName);
+    
+    const updates = inventoryProducts
+      .filter(p => p.category === selectedCategory)
+      .map(p => updateProduct(p.id, { category: newCategoryName as any }));
+    
+    await Promise.all(updates);
+    
     setIsEditCategoryOpen(false)
     setSelectedCategoryNames([]);
     toast.success("Category renamed!")
   }
 
-  const handleConfirmCategoryDelete = () => {
-    let updatedCategories = categories.filter(c => c !== selectedCategory);
-    inventoryProducts.forEach(p => {
-      if (p.category === selectedCategory) {
-        updateProduct(p.id, { category: "Uncategorized" as any });
-      }
-    });
-    if (!updatedCategories.includes("Uncategorized")) updatedCategories.push("Uncategorized");
-    setCategories(updatedCategories)
+  const handleConfirmCategoryDelete = async () => {
+    const updates = inventoryProducts
+      .filter(p => p.category === selectedCategory)
+      .map(p => updateProduct(p.id, { category: "Uncategorized" as any }));
+    
+    await Promise.all(updates);
+    
+    deleteCategory(selectedCategory);
     setIsDeleteCategoryOpen(false)
     toast.success("Category deleted.")
   }
@@ -186,7 +199,9 @@ export default function ManageMenuPage() {
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
-                <BreadcrumbPage className="text-base font-semibold text-foreground">Menu Management</BreadcrumbPage>
+                <BreadcrumbPage className="text-base font-semibold
+                
+                text-foreground">Menu Management</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>

@@ -6,7 +6,9 @@ export interface Product {
   name: string;
   price: number;
   category: string;
-  image?: string; 
+  image?: string;
+  variantId?: string; // Added for Supabase
+  size?: string;      // Added for Supabase
 }
 
 export interface CartItem extends Product {

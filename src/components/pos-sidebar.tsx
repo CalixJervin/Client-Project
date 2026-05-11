@@ -5,6 +5,8 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -12,17 +14,28 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { Link } from "react-router-dom"
+import { Link, useLocation } from "react-router-dom"
 import { AccountModal } from "@/Login/accountModal"
 import { useState } from "react"
-import { Settings, LayoutDashboard, ShoppingCart, Package } from "lucide-react"
-import { CommandIcon } from "lucide-react"
+import { 
+  Settings, 
+  LayoutDashboard, 
+  ShoppingCart, 
+  Package, 
+  FileChartColumn, 
+  Database, 
+  FileText, 
+  CircleHelp, 
+  Search,
+  CommandIcon
+} from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { setOpenMobile } = useSidebar()
   const [isAccountOpen, setIsAccountOpen] = useState(false)
   const { user } = useAuth()
+  const location = useLocation()
 
   return (
     <Sidebar {...props}>
@@ -36,9 +49,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
-            
             <SidebarMenuItem>
-              <SidebarMenuButton asChild>
+              <SidebarMenuButton asChild isActive={location.pathname === "/"}>
                 <Link to="/" onClick={() => setOpenMobile(false)}>
                   <ShoppingCart className="size-4" />
                   <span>POS</span>
@@ -49,15 +61,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             {user?.role === "admin" && (
               <>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton 
+                    asChild 
+                    isActive={location.pathname === "/dashboard"}
+                    tooltip="Dashboard"
+                  >
                     <Link to="/dashboard" onClick={() => setOpenMobile(false)}>
                       <LayoutDashboard className="size-4" />
                       <span>Dashboard</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton 
+                    asChild 
+                    isActive={location.pathname === "/inventory"}
+                    tooltip="Inventory"
+                  >
                     <Link to="/inventory" onClick={() => setOpenMobile(false)}>
                       <Package className="size-4" />
                       <span>Inventory</span>
@@ -66,18 +87,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </SidebarMenuItem>
               </>
             )}
-            
-            <SidebarRail />
-            
+
             <SidebarMenuItem>
-              <SidebarMenuButton asChild>
+              <SidebarMenuButton 
+                asChild 
+                isActive={location.pathname === "/menuManagement"}
+                tooltip="Edit Menu"
+              >
                 <Link to="/menuManagement" onClick={() => setOpenMobile(false)}>
                   <Settings className="size-4" />
                   <span>Edit Menu</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>

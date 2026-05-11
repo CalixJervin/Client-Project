@@ -1,0 +1,208 @@
+-- supabase/migrations/001_initial_schema.sql
+
+-- TABLE: staff
+CREATE TABLE staff (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  role text NOT NULL CHECK (role IN ('cashier', 'admin')),
+  pin_hash text NOT NULL,
+  avatar_color text,
+  created_at timestamptz DEFAULT now()
+);
+
+-- TABLE: ingredients
+CREATE TABLE ingredients (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  unit text NOT NULL,
+  current_stock numeric NOT NULL DEFAULT 0,
+  low_stock_threshold numeric NOT NULL DEFAULT 0,
+  cost_per_unit numeric,
+  supplier text,
+  created_at timestamptz DEFAULT now()
+);
+
+-- TABLE: recipes
+CREATE TABLE recipes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  yield integer NOT NULL DEFAULT 1,
+  created_at timestamptz DEFAULT now()
+);
+
+-- TABLE: products
+CREATE TABLE products (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  category text NOT NULL,
+  type text NOT NULL CHECK (type IN ('made-to-order', 'ready-made')) DEFAULT 'ready-made',
+  image_url text,
+  in_stock boolean NOT NULL DEFAULT true,
+  availability text DEFAULT 'all-day',
+  quantity numeric DEFAULT 0,
+  low_stock_threshold numeric DEFAULT 0,
+  created_at timestamptz DEFAULT now()
+);
+
+-- TABLE: product_variants
+CREATE TABLE product_variants (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id uuid REFERENCES products(id) ON DELETE CASCADE,
+  size text NOT NULL,
+  price numeric NOT NULL,
+  recipe_id uuid REFERENCES recipes(id) ON DELETE SET NULL
+);
+
+-- TABLE: recipe_ingredients
+CREATE TABLE recipe_ingredients (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  recipe_id uuid REFERENCES recipes(id) ON DELETE CASCADE,
+  ingredient_id uuid REFERENCES ingredients(id) ON DELETE CASCADE,
+  quantity numeric NOT NULL
+);
+
+-- TABLE: restock_logs
+CREATE TABLE restock_logs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  ingredient_id uuid REFERENCES ingredients(id) ON DELETE CASCADE,
+  product_id uuid REFERENCES products(id) ON DELETE CASCADE,
+  quantity_added numeric NOT NULL,
+  supplier text,
+  notes text,
+  created_at timestamptz DEFAULT now()
+);
+
+-- TABLE: orders
+CREATE TABLE orders (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  staff_id uuid REFERENCES staff(id),
+  total numeric NOT NULL,
+  status text DEFAULT 'completed',
+  created_at timestamptz DEFAULT now()
+);
+
+-- TABLE: order_items
+CREATE TABLE order_items (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id uuid REFERENCES orders(id) ON DELETE CASCADE,
+  product_id uuid REFERENCES products(id),
+  variant_id uuid REFERENCES product_variants(id),
+  product_name text NOT NULL,
+  size text,
+  price numeric NOT NULL,
+  quantity integer NOT NULL DEFAULT 1
+);
+
+-- TABLE: sales_logs
+CREATE TABLE sales_logs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id uuid REFERENCES orders(id) ON DELETE CASCADE,
+  created_at timestamptz DEFAULT now()
+);
+
+-- Enable RLS on ALL tables
+ALTER TABLE staff ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ingredients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE recipes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE product_variants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE recipe_ingredients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE restock_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sales_logs ENABLE ROW LEVEL SECURITY;
+
+-- TODO: Replace open RLS policies with role-based policies when backend auth is implemented
+CREATE POLICY "Allow all for now" ON staff FOR ALL USING (true);
+CREATE POLICY "Allow all for now" ON ingredients FOR ALL USING (true);
+CREATE POLICY "Allow all for now" ON recipes FOR ALL USING (true);
+CREATE POLICY "Allow all for now" ON products FOR ALL USING (true);
+CREATE POLICY "Allow all for now" ON product_variants FOR ALL USING (true);
+CREATE POLICY "Allow all for now" ON recipe_ingredients FOR ALL USING (true);
+CREATE POLICY "Allow all for now" ON restock_logs FOR ALL USING (true);
+CREATE POLICY "Allow all for now" ON orders FOR ALL USING (true);
+CREATE POLICY "Allow all for now" ON order_items FOR ALL USING (true);
+CREATE POLICY "Allow all for now" ON sales_logs FOR ALL USING (true);
+
+-- Enable Realtime for key tables
+ALTER PUBLICATION supabase_realtime ADD TABLE products;
+ALTER PUBLICATION supabase_realtime ADD TABLE ingredients;
+ALTER PUBLICATION supabase_realtime ADD TABLE product_variants;
+
+-- TRIGGER FUNCTION: update_product_in_stock
+-- For ready-made: in_stock = (quantity > 0)
+-- For made-to-order: we could check ingredients, but for simplicity we'll let the user toggle it or handle it in the sale deduction
+CREATE OR REPLACE FUNCTION update_product_in_stock()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.type = 'ready-made' THEN
+    NEW.in_stock := NEW.quantity > 0;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_update_product_in_stock
+BEFORE INSERT OR UPDATE OF quantity ON products
+FOR EACH ROW
+EXECUTE FUNCTION update_product_in_stock();
+
+-- POSTGRES FUNCTION: deduct_stock_on_sale
+CREATE OR REPLACE FUNCTION deduct_stock_on_sale(p_order_items jsonb)
+RETURNS TABLE (ingredient_id uuid, ingredient_name text, current_stock numeric, threshold numeric)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_item jsonb;
+  v_product_id uuid;
+  v_variant_id uuid;
+  v_quantity numeric;
+  v_recipe_id uuid;
+  v_product_type text;
+  v_ri RECORD;
+  v_all_ings_available boolean;
+BEGIN
+  FOR v_item IN SELECT * FROM jsonb_array_elements(p_order_items) LOOP
+    v_product_id := (v_item->>'product_id')::uuid;
+    v_variant_id := (v_item->>'variant_id')::uuid;
+    v_quantity := (v_item->>'quantity')::numeric;
+
+    -- Get product type
+    SELECT type INTO v_product_type FROM products WHERE id = v_product_id;
+
+    IF v_product_type = 'ready-made' THEN
+      -- Deduct product quantity
+      UPDATE products 
+      SET quantity = GREATEST(0, quantity - v_quantity)
+      WHERE id = v_product_id;
+      
+      -- Note: Trigger trg_update_product_in_stock will flip in_stock if quantity hit 0
+    ELSIF v_product_type = 'made-to-order' THEN
+      -- Get recipe id from variant
+      SELECT recipe_id INTO v_recipe_id FROM product_variants WHERE id = v_variant_id;
+      
+      IF v_recipe_id IS NOT NULL THEN
+        -- Deduct each ingredient
+        FOR v_ri IN SELECT ri.ingredient_id, ri.quantity as recipe_qty, r.yield 
+                    FROM recipe_ingredients ri 
+                    JOIN recipes r ON ri.recipe_id = r.id
+                    WHERE ri.recipe_id = v_recipe_id LOOP
+          UPDATE ingredients
+          SET current_stock = GREATEST(0, current_stock - (v_ri.recipe_qty / v_ri.yield) * v_quantity)
+          WHERE id = v_ri.ingredient_id;
+        END LOOP;
+      END IF;
+    END IF;
+  END LOOP;
+
+  -- Return ingredients OR ready-made products below threshold
+  RETURN QUERY
+  SELECT i.id, i.name, i.current_stock, i.low_stock_threshold
+  FROM ingredients i
+  WHERE i.current_stock <= i.low_stock_threshold
+  UNION ALL
+  SELECT p.id, p.name, p.quantity, p.low_stock_threshold
+  FROM products p
+  WHERE p.type = 'ready-made' AND p.quantity <= p.low_stock_threshold;
+END;
+$$;

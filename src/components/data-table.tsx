@@ -29,14 +29,13 @@ import {
   useReactTable,
   type ColumnDef,
   type ColumnFiltersState,
-  type Row,
-  type SortingState,
   type VisibilityState,
+  type SortingState,
+  type Row,
 } from "@tanstack/react-table"
 import { useTransactions } from "@/hooks/useTransactions"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -70,7 +69,7 @@ import {
   DialogFooter
 } from "@/components/ui/dialog"
 import { 
-  GripVerticalIcon, 
+  GripVerticalIcon,
   EllipsisVerticalIcon, 
   Columns3Icon, 
   ChevronDownIcon, 
@@ -83,6 +82,7 @@ import {
   CreditCard,
   History
 } from "lucide-react"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { format } from "date-fns"
 
 export interface TransactionRow {
@@ -125,14 +125,14 @@ function DraggableRow({ row }: { row: Row<TransactionRow> }) {
       data-state={row.getIsSelected() && "selected"}
       data-dragging={isDragging}
       ref={setNodeRef}
-      className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80"
+      className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80 transition-colors hover:bg-[#E2D9CC]/30 border-b border-[#DDD5C8]/50 last:border-0"
       style={{
         transform: CSS.Transform.toString(transform),
         transition: transition,
       }}
     >
       {row.getVisibleCells().map((cell) => (
-        <TableCell key={cell.id}>
+        <TableCell key={cell.id} className="py-3">
           {flexRender(cell.column.columnDef.cell, cell.getContext())}
         </TableCell>
       ))}
@@ -142,6 +142,7 @@ function DraggableRow({ row }: { row: Row<TransactionRow> }) {
 
 export function DataTable() {
   const { transactions, transactionItems } = useTransactions()
+  const isMobile = useIsMobile()
   const [selectedTransactionId, setSelectedTransactionId] = React.useState<string | null>(null)
   
   const data = React.useMemo(() => {
@@ -177,38 +178,12 @@ export function DataTable() {
       cell: ({ row }) => <DragHandle id={row.original.id} />,
     },
     {
-      id: "select",
-      header: ({ table }) => (
-        <div className="flex items-center justify-center">
-          <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && "indeterminate")
-            }
-            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-            aria-label="Select all"
-          />
-        </div>
-      ),
-      cell: ({ row }) => (
-        <div className="flex items-center justify-center">
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select row"
-          />
-        </div>
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
-    {
       accessorKey: "order_id",
       header: "Order ID",
       cell: ({ row }) => (
-        <span className="font-bold text-foreground">{row.original.order_id}</span>
+        <span className="font-bold text-[#1C1412] text-sm">{row.original.order_id}</span>
       ),
-      enableHiding: false,
+      enableHiding: true,
     },
     {
       accessorKey: "timestamp",
@@ -217,7 +192,7 @@ export function DataTable() {
         const date = new Date(row.original.timestamp)
         const timeStr = format(date, "hh:mm a")
         return (
-          <span className="text-muted-foreground font-medium">
+          <span className="text-[#6B5B4E] font-medium text-xs">
             {timeStr}
           </span>
         )
@@ -230,7 +205,7 @@ export function DataTable() {
         const method = row.original.payment_method || 'Unknown'
         const label = `Paid (${method.toUpperCase()})`
         return (
-          <Badge variant="outline" className="px-1.5 font-medium border-green-200 bg-green-50/50 text-green-700 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
+          <Badge variant="outline" className="px-1.5 font-black text-[10px] uppercase border-[#D4C9BB] bg-[#E8DFD3]/50 text-[#5C4A38]">
             <CircleCheckIcon className="size-3 fill-current mr-1" />
             {label}
           </Badge>
@@ -241,9 +216,9 @@ export function DataTable() {
       accessorKey: "items_summary",
       header: "Items",
       cell: ({ row }) => (
-        <div className="flex flex-col py-1 max-w-[120px] sm:max-w-none">
-          <span className="font-medium text-sm">{row.original.items_count} items</span>
-          <span className="text-xs text-muted-foreground truncate sm:whitespace-pre-wrap sm:overflow-visible">
+        <div className="flex flex-col py-1 max-w-[150px] sm:max-w-none">
+          <span className="font-bold text-[#1C1412] text-sm">{row.original.items_count} items</span>
+          <span className="text-[11px] text-[#6B5B4E] truncate">
             {row.original.items_summary}
           </span>
         </div>
@@ -253,7 +228,7 @@ export function DataTable() {
       accessorKey: "total_amount",
       header: () => <div className="w-full text-right">Total Amount</div>,
       cell: ({ row }) => (
-        <div className="w-full text-right font-bold text-lg text-foreground">
+        <div className="w-full text-right font-black text-lg text-[#1C1412]">
           ₱{row.original.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
         </div>
       ),
@@ -282,9 +257,25 @@ export function DataTable() {
     },
   ], [])
 
-  const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({})
+    React.useState<VisibilityState>({
+      order_id: false,
+    })
+
+  React.useEffect(() => {
+    if (isMobile) {
+      setColumnVisibility((prev) => ({
+        ...prev,
+        payment_method: false,
+      }))
+    } else {
+      setColumnVisibility((prev) => ({
+        ...prev,
+        payment_method: true,
+      }))
+    }
+  }, [isMobile])
+
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   )
@@ -317,13 +308,10 @@ export function DataTable() {
     state: {
       sorting,
       columnVisibility,
-      rowSelection,
       columnFilters,
       pagination,
     },
     getRowId: (row) => row.id,
-    enableRowSelection: true,
-    onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
@@ -332,7 +320,7 @@ export function DataTable() {
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedRowModel: getCoreRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
   })
 
@@ -350,17 +338,17 @@ export function DataTable() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between px-4 lg:px-6">
-        <h2 className="text-xl font-bold">Recent Transactions</h2>
+        <h2 className="text-xl font-black text-[#1C1412]">Recent Transactions</h2>
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="bg-[#E8DFD3] border-[#D4C9BB] text-[#6B5B4E] font-bold">
                 <Columns3Icon data-icon="inline-start" />
                 Columns
                 <ChevronDownIcon data-icon="inline-end" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-32">
+            <DropdownMenuContent align="end" className="w-32 bg-[#F5EFE6] border-[#DDD5C8]">
               {table
                 .getAllColumns()
                 .filter(
@@ -372,7 +360,7 @@ export function DataTable() {
                   return (
                     <DropdownMenuCheckboxItem
                       key={column.id}
-                      className="capitalize"
+                      className="capitalize text-[#6B5B4E] focus:bg-[#E8DFD3]"
                       checked={column.getIsVisible()}
                       onCheckedChange={(value) =>
                         column.toggleVisibility(!!value)
@@ -387,8 +375,8 @@ export function DataTable() {
         </div>
       </div>
 
-      <div className="px-4 lg:px-6 overflow-x-auto">
-        <div className="overflow-hidden rounded-xl border bg-card min-w-[600px] md:min-w-0">
+      <div className="px-4 lg:px-6">
+        <div className="overflow-hidden rounded-xl border border-[#DDD5C8] bg-[#F5EFE6] shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
           <DndContext
             collisionDetection={closestCenter}
             modifiers={[restrictToVerticalAxis]}
@@ -397,12 +385,12 @@ export function DataTable() {
             id={sortableId}
           >
             <Table>
-              <TableHeader className="bg-muted/50">
+              <TableHeader className="bg-[#E8DFD3]">
                 {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
+                  <TableRow key={headerGroup.id} className="border-b border-[#D4C9BB] hover:bg-transparent">
                     {headerGroup.headers.map((header) => {
                       return (
-                        <TableHead key={header.id} colSpan={header.colSpan}>
+                        <TableHead key={header.id} colSpan={header.colSpan} className="text-[11px] font-bold uppercase text-[#9E8E7E]">
                           {header.isPlaceholder
                             ? null
                             : flexRender(
@@ -429,7 +417,7 @@ export function DataTable() {
                   <TableRow>
                     <TableCell
                       colSpan={columns.length}
-                      className="h-24 text-center text-muted-foreground"
+                      className="h-24 text-center text-[#9E8E7E] font-medium"
                     >
                       No transactions recorded yet.
                     </TableCell>
@@ -440,11 +428,7 @@ export function DataTable() {
           </DndContext>
         </div>
 
-        <div className="mt-4 flex items-center justify-between px-2">
-          <div className="hidden flex-1 text-sm text-muted-foreground lg:flex">
-            {table.getFilteredSelectedRowModel().rows.length} of{" "}
-            {table.getFilteredRowModel().rows.length} row(s) selected.
-          </div>
+        <div className="mt-4 flex items-center justify-end px-2">
           <div className="flex w-full items-center gap-8 lg:w-fit">
             <div className="hidden items-center gap-2 lg:flex">
               <Label htmlFor="rows-per-page" className="text-sm font-medium">
@@ -479,42 +463,42 @@ export function DataTable() {
             <div className="ml-auto flex items-center gap-2 lg:ml-0">
               <Button
                 variant="outline"
-                className="hidden h-8 w-8 p-0 lg:flex"
+                className="hidden h-11 w-11 p-0 lg:flex active:scale-95 touch-manipulation"
                 onClick={() => table.setPageIndex(0)}
                 disabled={!table.getCanPreviousPage()}
               >
                 <span className="sr-only">Go to first page</span>
-                <ChevronsLeftIcon />
+                <ChevronsLeftIcon className="size-5" />
               </Button>
               <Button
                 variant="outline"
-                className="size-8"
+                className="h-11 w-11 active:scale-95 touch-manipulation"
                 size="icon"
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
               >
                 <span className="sr-only">Go to previous page</span>
-                <ChevronLeftIcon />
+                <ChevronLeftIcon className="size-5" />
               </Button>
               <Button
                 variant="outline"
-                className="size-8"
+                className="h-11 w-11 active:scale-95 touch-manipulation"
                 size="icon"
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
               >
                 <span className="sr-only">Go to next page</span>
-                <ChevronRightIcon />
+                <ChevronRightIcon className="size-5" />
               </Button>
               <Button
                 variant="outline"
-                className="hidden size-8 lg:flex"
+                className="hidden h-11 w-11 lg:flex active:scale-95 touch-manipulation"
                 size="icon"
                 onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                 disabled={!table.getCanNextPage()}
               >
                 <span className="sr-only">Go to last page</span>
-                <ChevronsRightIcon />
+                <ChevronsRightIcon className="size-5" />
               </Button>
             </div>
           </div>

@@ -32,8 +32,8 @@ interface AddProductWizardProps {
   ingredients: Ingredient[];
   recipes: Recipe[];
   categories: string[];
-  onComplete: (data: Omit<Product, 'id'>) => void;
-  onAddRecipe: (data: Omit<Recipe, 'id'>) => string;
+  onComplete: (data: Omit<Product, 'id'>) => Promise<void>;
+  onAddRecipe: (data: Omit<Recipe, 'id'>) => Promise<string | undefined>;
 }
 
 export function AddProductWizard({
@@ -45,6 +45,7 @@ export function AddProductWizard({
 }: AddProductWizardProps) {
   const [step, setStep] = useState(1);
   const [showInlineRecipeBuilder, setShowInlineRecipeBuilder] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   
   // Product state
   const [name, setName] = useState("");
@@ -83,7 +84,7 @@ export function AddProductWizard({
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!price || Number(price) <= 0) {
       toast.error("Please enter a valid price");
       return;
@@ -93,34 +94,51 @@ export function AddProductWizard({
       return;
     }
 
-    const productData: Omit<Product, 'id'> = {
-      name,
-      category,
-      type,
-      availability,
-      variants: [
-        {
-          size: "Regular",
-          price: Number(price),
-          recipeId: type === 'made-to-order' ? recipeId : null
-        }
-      ],
-      image: image || "https://placehold.co/600x600/e2e8f0/64748b?text=No+Image",
-      inStock: true,
-      ...(type === 'ready-made' ? {
-        quantity: Number(quantity),
-        lowStockThreshold: Number(lowStockThreshold) || 0,
-        restockLog: []
-      } : {})
-    };
-    onComplete(productData);
+    setIsSaving(true);
+    try {
+      const productData: Omit<Product, 'id'> = {
+        name,
+        category,
+        type,
+        availability,
+        variants: [
+          {
+            id: "", // Placeholder, Supabase will generate this or we can generate it
+            size: "Regular",
+            price: Number(price),
+            recipeId: type === 'made-to-order' ? recipeId : null
+          }
+        ],
+        image: image || "https://placehold.co/600x600/e2e8f0/64748b?text=No+Image",
+        inStock: true,
+        ...(type === 'ready-made' ? {
+          quantity: Number(quantity),
+          lowStockThreshold: Number(lowStockThreshold) || 0,
+          restockLog: []
+        } : {})
+      };
+      await onComplete(productData);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleAddInlineRecipe = (recipeData: Omit<Recipe, 'id'>) => {
-    const newId = onAddRecipe(recipeData);
-    setRecipeId(newId);
-    setShowInlineRecipeBuilder(false);
-    toast.success("New recipe created and linked!");
+  const handleAddInlineRecipe = async (recipeData: Omit<Recipe, 'id'>) => {
+    setIsSaving(true);
+    try {
+      const newId = await onAddRecipe(recipeData);
+      if (newId) {
+        setRecipeId(newId);
+        setShowInlineRecipeBuilder(false);
+        toast.success("New recipe created and linked!");
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -231,7 +249,7 @@ export function AddProductWizard({
                 <div className="grid gap-2 p-4 bg-muted/30 rounded-xl border">
                   {showInlineRecipeBuilder ? (
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center">
+                      <div className="flex justify-between items-center gap-2 flex-wrap">
                         <h3 className="text-xs font-bold uppercase">Recipe Builder</h3>
                         <Button variant="ghost" size="sm" onClick={() => setShowInlineRecipeBuilder(false)} className="h-6 w-6 p-0">
                           <X className="h-4 w-4" />
@@ -314,12 +332,12 @@ export function AddProductWizard({
             </Button>
           )}
           {step === 1 ? (
-            <Button onClick={handleNext} className="min-w-[100px]">
+            <Button onClick={handleNext} className="min-w-[100px]" disabled={isSaving}>
               Continue <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           ) : (
-            <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700 min-w-[120px]">
-              <Check className="h-4 w-4 mr-1" /> Save Product
+            <Button onClick={handleSave} className="min-w-[120px]" disabled={isSaving}>
+              {isSaving ? "Saving..." : <><Check className="h-4 w-4 mr-1" /> Save Product</>}
             </Button>
           )}
         </div>

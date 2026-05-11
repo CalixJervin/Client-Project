@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Minus, X } from "lucide-react"; // ADDED: X icon
+import { Plus, Trash2, Minus, X, Coffee } from "lucide-react"; 
 import type { CartItem } from "@/hooks/useCart";
 import { useTransactions } from "@/hooks/useTransactions";
 import {
@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
-import { useInventory } from "@/hooks/useInventory";
 
 interface TicketSidebarProps {
   cart: CartItem[];
@@ -21,7 +20,7 @@ interface TicketSidebarProps {
   clearCart: () => void;
   subtotal: number;
   total: number;
-  onClose?: () => void; // ADDED: Optional onClose prop
+  onClose?: () => void;
 }
 
 export function TicketSidebar({
@@ -31,14 +30,14 @@ export function TicketSidebar({
   clearCart,
   subtotal,
   total,
-  onClose // ADDED: Destructure onClose
+  onClose
 }: TicketSidebarProps) {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [amountReceived, setAmountReceived] = useState<number | "">("");
+  const [isClearing, setIsClearing] = useState(false);
   
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "gcash">("cash");
   const { saveTransaction } = useTransactions();
-  const { processSale, products: inventoryProducts } = useInventory();
 
   const change = typeof amountReceived === "number" ? amountReceived - total : 0;
   
@@ -46,15 +45,6 @@ export function TicketSidebar({
 
   const handleCompleteTransaction = () => {
     if (isSufficient) {
-      // Auto-deduction logic
-      cart.forEach(item => {
-        // Try to find a matching product in inventory by name or ID
-        const invProduct = inventoryProducts.find(p => p.name === item.name || p.id === String(item.id));
-        if (invProduct) {
-          processSale(invProduct.id, 0, item.qty);
-        }
-      });
-
       saveTransaction(cart, subtotal, paymentMethod);
       clearCart();
       setIsCheckoutOpen(false);
@@ -65,94 +55,130 @@ export function TicketSidebar({
   };
 
   return (
-    <div className="w-full sm:w-[350px] border-l bg-background flex flex-col h-full shadow-xl z-10 shrink-0">
+    <div className="w-full lg:w-[350px] border-l border-[#CEC3B4] bg-[#E2D9CC] flex flex-col h-full shadow-xl z-10 shrink-0">
       
-      {/* UPDATED HEADER: Added the Mobile Close Button */}
-      <div className="flex items-center justify-between p-4 border-b shrink-0 h-16">
+      {/* HEADER */}
+      <div className="flex items-center justify-between p-4 border-b border-[#CEC3B4] shrink-0 h-16">
         <div className="flex items-center gap-2">
-          {/* Only shows on mobile screens when onClose is provided */}
           {onClose && (
             <Button 
               variant="ghost" 
               size="icon" 
-              className="lg:hidden h-8 w-8 -ml-2 text-muted-foreground hover:text-foreground cursor-pointer" 
+              className="lg:hidden h-11 w-11 -ml-2 text-muted-foreground hover:text-foreground active:scale-95 touch-manipulation" 
               onClick={onClose}
             >
-              <X className="h-5 w-5" />
+              <X className="h-6 w-6" />
             </Button>
           )}
-          <h2 className="font-semibold text-lg">Current Order</h2>
+          <h2 className="font-bold text-[15px] text-[#1C1412]">Current Order</h2>
         </div>
 
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={clearCart}
-          className="text-destructive hover:text-destructive/90 hover:bg-destructive/10 cursor-pointer"
-        >
-          Clear
-        </Button>
+        {isClearing ? (
+          <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-2">
+            <span className="text-[10px] font-bold text-[#6B5B4E] uppercase">Sure?</span>
+            <Button 
+              variant="destructive" 
+              size="sm" 
+              onClick={() => { clearCart(); setIsClearing(false); }}
+              className="h-8 px-3 text-[10px] font-bold uppercase"
+            >
+              Yes
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setIsClearing(false)}
+              className="h-8 px-3 text-[10px] font-bold uppercase text-[#6B5B4E]"
+            >
+              No
+            </Button>
+          </div>
+        ) : (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => cart.length > 0 && setIsClearing(true)}
+            disabled={cart.length === 0}
+            className="text-[#C0392B] hover:text-[#C0392B] hover:bg-[#C0392B]/10 cursor-pointer h-10 px-4 active:scale-95 touch-manipulation text-[13px] font-medium"
+          >
+            Clear
+          </Button>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
-        <AnimatePresence initial={false}>
-          {cart.map((item) => (
-            <motion.div 
-              key={item.id} 
-              initial={{ opacity: 0, x: 30, height: 0 }}
-              animate={{ opacity: 1, x: 0, height: "auto" }}
-              exit={{ opacity: 0, x: -30, height: 0, margin: 0 }}
-              transition={{ duration: 0.2 }}
-              className="flex flex-col gap-2 overflow-hidden"
-            >
-              <div className="flex justify-between font-medium pt-2">
-                <span>{item.name}</span>
-                <span>₱{(item.price * item.qty).toFixed(2)}</span>
-              </div>
-              <div className="flex items-center gap-3 pb-2 border-b border-border/50">
-                <div className="flex items-center border rounded-md">
+        {cart.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center py-12 text-center animate-in fade-in duration-500">
+            <div className="bg-[#D9D0C3] p-6 rounded-full mb-4">
+              <Coffee className="h-10 w-10 text-[#C4B5A5]" />
+            </div>
+            <h3 className="text-[#9E8E7E] text-[14px] font-bold">No items yet</h3>
+            <p className="text-[#B5A699] text-[12px] mt-1">Tap a product to add it to the order</p>
+          </div>
+        ) : (
+          <AnimatePresence initial={false}>
+            {cart.map((item) => (
+              <motion.div 
+                key={item.id} 
+                initial={{ opacity: 0, x: 30, height: 0 }}
+                animate={{ opacity: 1, x: 0, height: "auto" }}
+                exit={{ opacity: 0, x: -30, height: 0, margin: 0 }}
+                transition={{ duration: 0.2 }}
+                className="flex flex-col gap-2 overflow-hidden"
+              >
+                <div className="flex justify-between text-[#1C1412] font-semibold pt-2 text-[14px] gap-2 flex-wrap">
+                  <span>{item.name}</span>
+                  <span>₱{(item.price * item.qty).toFixed(2)}</span>
+                </div>
+                <div className="flex items-center gap-3 pb-2 border-b border-[#CEC3B4]/50">
+                  <div className="flex items-center border border-[#CEC3B4] rounded-lg bg-[#D9D0C3]/50">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => updateQty(item.id, -1)}
+                      className="h-10 w-10 rounded-none active:bg-[#CEC3B4] touch-manipulation text-[#1C1412]"
+                    >
+                      <Minus className="h-3.5 w-3.5" />
+                    </Button>
+                    <span className="w-8 text-center text-sm font-bold text-[#1C1412]">{item.qty}</span>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => updateQty(item.id, 1)}
+                      className="h-10 w-10 rounded-none active:bg-[#CEC3B4] touch-manipulation text-[#1C1412]"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    onClick={() => updateQty(item.id, -1)}
-                    className="h-8 w-8 rounded-none cursor-pointer"
+                    onClick={() => removeFromCart(item.id)}
+                    className="h-10 w-10 text-[#9E8E7E] hover:text-[#C0392B] active:scale-95 touch-manipulation"
                   >
-                    <Minus className="h-3 w-3" />
-                  </Button>
-                  <span className="w-8 text-center text-sm">{item.qty}</span>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={() => updateQty(item.id, 1)}
-                    className="h-8 w-8 rounded-none cursor-pointer"
-                  >
-                    <Plus className="h-3 w-3" />
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => removeFromCart(item.id)}
-                  className="h-8 w-8 text-muted-foreground hover:text-destructive cursor-pointer"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        )}
       </div>
 
-      <div className="p-4 border-t bg-muted/5 shrink-0 flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5 text-sm">
-          <div className="flex justify-between font-bold text-xl">
+      <div className="p-4 border-t border-[#CEC3B4] bg-[#D9D0C3] shrink-0 flex flex-col gap-4">
+        <div className="flex flex-col gap-1.5">
+          <div className="flex justify-between text-[#1C1412] font-bold text-[16px] gap-2 flex-wrap">
             <span>Total</span>
             <span>₱{total.toFixed(2)}</span>
           </div>
         </div>
         <div>
           <Button 
-            className="w-full font-bold text-lg h-12 cursor-pointer"
+            className={`w-full font-bold text-[15px] h-12 rounded-[8px] transition-all active:scale-[0.98] touch-manipulation ${
+              cart.length === 0 
+                ? "bg-[#C4B5A5] text-[#9E8E7E] cursor-not-allowed pointer-events-none" 
+                : "bg-[#1C1412] text-white hover:bg-[#2C2018]"
+            }`}
             onClick={() => setIsCheckoutOpen(true)}
             disabled={cart.length === 0}
           >

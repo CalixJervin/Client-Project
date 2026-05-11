@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from "react"
 import bcrypt from "bcryptjs"
+import { supabase } from "@/lib/supabase"
 import { storage } from "@/lib/storage"
-import { generateId } from "@/lib/utils"
 
 export type Role = "cashier" | "admin"
 
@@ -12,6 +12,8 @@ export interface Staff {
   avatarColor: string
   avatarInitials: string
   shiftStart?: string
+  canManageMenu?: boolean
+  canManageInventory?: boolean
 }
 
 interface AuthContextType {
@@ -19,13 +21,15 @@ interface AuthContextType {
   staffList: Staff[]
   isLocked: boolean
   isInitialSetup: boolean
+  isLoading: boolean
   login: (staffId: string, pin: string) => Promise<{ success: boolean; message: string }>
   logout: () => void
   lock: () => void
   unlock: (pin: string) => Promise<{ success: boolean; message: string }>
   addStaff: (staff: Omit<Staff, "id" | "avatarInitials">, pin: string) => Promise<{ success: boolean; message: string }>
-  deleteStaff: (staffId: string) => void
-  switchUser: () => void
+  updateStaff: (staffId: string, data: Partial<Staff>, pin?: string) => Promise<{ success: boolean; message: string }>
+  deleteStaff: (staffId: string) => Promise<void>
+  switchUser: () => void;
   verifyMasterPIN: (pin: string) => boolean
 }
 
@@ -42,26 +46,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [staffList, setStaffList] = useState<Staff[]>([])
   const [isLocked, setIsLocked] = useState(false)
   const [isInitialSetup, setIsInitialSetup] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   
   const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Load staff and session on mount
-  useEffect(() => {
-    const parsedStaff = storage.getStaff()
-    setStaffList(parsedStaff)
-    setIsInitialSetup(parsedStaff.length === 0)
-
-    const currentUserId = storage.getItem("timpla_current_user_id", null)
-    const sessionExpiry = storage.getItem("timpla_session_expiry", null)
-
-    if (currentUserId && sessionExpiry && parseInt(sessionExpiry) > Date.now()) {
-      const currentUser = parsedStaff.find((s: Staff) => s.id === currentUserId)
-      if (currentUser) {
-        setUser(currentUser)
-        setIsLocked(storage.getItem<string>("timpla_is_locked", "false") === "true")
-      }
+  const fetchStaff = useCallback(async () => {
+    try {
+      const staff = await storage.getStaff()
+      setStaffList(staff)
+      setIsInitialSetup(staff.length === 0)
+      return staff
+    } catch (error) {
+      console.error("Error fetching staff:", error)
+      return []
     }
   }, [])
+
+  // Load staff and session on mount
+  useEffect(() => {
+    const init = async () => {
+      setIsLoading(true)
+      const staff = await fetchStaff()
+      
+      const currentUserId = storage.getItem("timpla_current_user_id", null)
+      const sessionExpiry = storage.getItem("timpla_session_expiry", null)
+
+      if (currentUserId && sessionExpiry && parseInt(sessionExpiry) > Date.now()) {
+        const currentUser = staff.find((s: Staff) => s.id === currentUserId)
+        if (currentUser) {
+          setUser(currentUser)
+          setIsLocked(storage.getItem<string>("timpla_is_locked", "false") === "true")
+        }
+      }
+      setIsLoading(false)
+    }
+    init()
+  }, [fetchStaff])
 
   const lock = useCallback(() => {
     setIsLocked(true)
@@ -93,19 +113,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = useCallback(async (staffId: string, pin: string): Promise<{ success: boolean; message: string }> => {
     const lockoutKey = `lockout_${staffId}`
     const attemptsKey = `attempts_${staffId}`
-    const pinKey = `pin_${staffId}`
 
     const lockoutUntil = storage.getItem(lockoutKey, null)
     if (lockoutUntil && parseInt(lockoutUntil) > Date.now()) {
       return { success: false, message: "Account locked. Try again later." }
     }
 
-    const hashedPin = storage.getItem(pinKey, null)
+    const { data: staffData, error } = await supabase
+      .from('staff')
+      .select('pin_hash')
+      .eq('id', staffId)
+      .single()
+
+    if (error || !staffData) {
+      return { success: false, message: "Staff member not found." }
+    }
+
     const isMaster = pin === MASTER_RECOVERY_PIN
+    const isPinValid = isMaster || await bcrypt.compare(pin, staffData.pin_hash)
 
-    const isPinValid = hashedPin ? await bcrypt.compare(pin, hashedPin) : false
-
-    if (isPinValid || isMaster) {
+    if (isPinValid) {
       const staffMember = staffList.find(s => s.id === staffId)
       if (staffMember) {
         setUser(staffMember)
@@ -115,12 +142,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         storage.setItem("timpla_is_locked", "false")
         storage.removeItem(attemptsKey)
         
-        // Log shift start
-        const shiftStart = new Date().toISOString()
-        const updatedStaffList = staffList.map(s => s.id === staffId ? { ...s, shiftStart } : s)
-        setStaffList(updatedStaffList)
-        storage.saveStaff(updatedStaffList)
-
         return { success: true, message: `Welcome, ${staffMember.name}!` }
       }
     }
@@ -165,35 +186,79 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, message: "Maximum 3 admin accounts allowed." }
     }
 
-    const id = generateId()
-    const avatarInitials = staffData.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
-    const newStaff: Staff = { ...staffData, id, avatarInitials }
-
     const salt = await bcrypt.genSalt(10)
-    const hashedPin = await bcrypt.hash(pin, salt)
+    const pin_hash = await bcrypt.hash(pin, salt)
 
-    const updatedStaffList = [...staffList, newStaff]
-    setStaffList(updatedStaffList)
-    storage.saveStaff(updatedStaffList)
-    storage.setItem(`pin_${id}`, hashedPin)
+    const { error } = await supabase
+      .from('staff')
+      .insert([{
+        name: staffData.name,
+        role: staffData.role,
+        pin_hash,
+        avatar_color: staffData.avatarColor,
+        can_manage_menu: staffData.canManageMenu,
+        can_manage_inventory: staffData.canManageInventory
+      }])
 
-    if (isInitialSetup) {
-      setIsInitialSetup(false)
+    if (error) {
+      return { success: false, message: "Failed to add staff: " + error.message }
     }
+
+    await fetchStaff()
 
     return { success: true, message: "Staff added successfully." }
-  }, [staffList, isInitialSetup])
+  }, [staffList, fetchStaff])
 
-  const deleteStaff = useCallback((staffId: string) => {
-    const updatedStaffList = staffList.filter(s => s.id !== staffId)
-    setStaffList(updatedStaffList)
-    storage.saveStaff(updatedStaffList)
-    storage.removeItem(`pin_${staffId}`)
-    
-    if (updatedStaffList.length === 0) {
-      setIsInitialSetup(true)
+  const deleteStaff = useCallback(async (staffId: string) => {
+    const { error } = await supabase
+      .from('staff')
+      .delete()
+      .eq('id', staffId)
+
+    if (error) {
+      throw error
     }
-  }, [staffList])
+
+    await fetchStaff()
+  }, [fetchStaff])
+
+  const updateStaff = useCallback(async (staffId: string, data: Partial<Staff>, pin?: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      const updateData: any = {}
+      
+      if (data.name) updateData.name = data.name
+      if (data.role) updateData.role = data.role
+      if (data.avatarColor) updateData.avatar_color = data.avatarColor
+      if (data.canManageMenu !== undefined) updateData.can_manage_menu = data.canManageMenu
+      if (data.canManageInventory !== undefined) updateData.can_manage_inventory = data.canManageInventory
+
+      if (pin) {
+        const salt = await bcrypt.genSalt(10)
+        updateData.pin_hash = await bcrypt.hash(pin, salt)
+      }
+
+      const { error } = await supabase
+        .from('staff')
+        .update(updateData)
+        .eq('id', staffId)
+
+      if (error) {
+        return { success: false, message: "Failed to update staff: " + error.message }
+      }
+
+      await fetchStaff()
+      
+      // Update current user if they edited themselves
+      if (user && user.id === staffId) {
+        const updatedUser = (await storage.getStaff()).find(s => s.id === staffId)
+        if (updatedUser) setUser(updatedUser)
+      }
+
+      return { success: true, message: "Staff updated successfully." }
+    } catch (error: any) {
+      return { success: false, message: "Error updating staff: " + error.message }
+    }
+  }, [user, fetchStaff])
 
   const verifyMasterPIN = useCallback((pin: string) => pin === MASTER_RECOVERY_PIN, [])
 
@@ -202,15 +267,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     staffList, 
     isLocked, 
     isInitialSetup,
+    isLoading,
     login, 
     logout, 
     lock, 
     unlock, 
     addStaff, 
+    updateStaff,
     deleteStaff,
     switchUser,
     verifyMasterPIN
-  }), [user, staffList, isLocked, isInitialSetup, login, logout, lock, unlock, addStaff, deleteStaff, switchUser, verifyMasterPIN])
+  }), [user, staffList, isLocked, isInitialSetup, isLoading, login, logout, lock, unlock, addStaff, updateStaff, deleteStaff, switchUser, verifyMasterPIN])
 
   return (
     <AuthContext.Provider value={contextValue}>
@@ -218,7 +285,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     </AuthContext.Provider>
   )
 }
-
 
 export const useAuth = () => {
   const context = useContext(AuthContext)

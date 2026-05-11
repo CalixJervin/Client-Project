@@ -17,11 +17,15 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { EllipsisVerticalIcon, LogOutIcon, UsersIcon } from "lucide-react"
+import { EllipsisVerticalIcon, LogOutIcon, UsersIcon, UserCircleIcon } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { useNavigate } from "react-router-dom"
 
-export function NavUser() {
+interface NavUserProps {
+  onAccountClick?: () => void
+}
+
+export function NavUser({ onAccountClick }: NavUserProps) {
   const { user, logout, switchUser } = useAuth()
   const { isMobile } = useSidebar()
   const navigate = useNavigate()
@@ -35,20 +39,20 @@ export function NavUser() {
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="data-[state=open]:bg-white/5 data-[state=open]:text-white hover:bg-white/5 bg-white/[0.05] transition-colors"
             >
               <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-bold">
+                <AvatarFallback className="rounded-lg bg-white/10 text-white font-bold">
                   {user.avatarInitials}
                 </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{user.name}</span>
-                <span className="truncate text-xs text-muted-foreground capitalize">
+                <span className="truncate font-medium text-white">{user.name}</span>
+                <span className="truncate text-xs text-[#A89080] capitalize">
                   {user.role}
                 </span>
               </div>
-              <EllipsisVerticalIcon className="ml-auto size-4" />
+              <EllipsisVerticalIcon className="ml-auto size-4 text-[#A89080]" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -74,6 +78,10 @@ export function NavUser() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
+              <DropdownMenuItem onClick={onAccountClick}>
+                <UserCircleIcon />
+                Account Settings
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => switchUser()}>
                 <UsersIcon />
                 Switch User

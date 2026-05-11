@@ -1,12 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { CartItem } from "./useCart";
-import { generateId } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "./use-auth";
+import { useInventory } from "@/context/InventoryContext";
+import { toast } from "sonner";
 
 export interface Transaction {
   id: string;
-  order_id: string; // Short readable ID like #ORD-1042
+  order_id: string; 
   total_amount: number;
-  payment_method: "cash" | "gcash";
+  payment_method: string;
   timestamp: string;
 }
 
@@ -22,63 +25,100 @@ export interface TransactionItem {
 export function useTransactions() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [transactionItems, setTransactionItems] = useState<TransactionItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
+  const { refreshData } = useInventory();
 
-  useEffect(() => {
-    const savedTransactions = localStorage.getItem("timpla_transactions");
-    const savedItems = localStorage.getItem("timpla_transaction_items");
-    
-    if (savedTransactions) {
-      const parsed = JSON.parse(savedTransactions);
-      // Filter out legacy transactions without order_id
-      const valid = parsed.filter((t: any) => t.order_id);
-      setTransactions(valid);
-      
-      // Sync back if legacy data was removed
-      if (valid.length !== parsed.length) {
-        localStorage.setItem("timpla_transactions", JSON.stringify(valid));
-      }
+  const fetchTransactions = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const { data: orders, error: ordersError } = await supabase
+        .from('orders')
+        .select('*, order_items(*)')
+        .order('created_at', { ascending: false });
+
+      if (ordersError) throw ordersError;
+
+      const txs: Transaction[] = (orders || []).map(o => ({
+        id: o.id,
+        order_id: `#ORD-${o.id.slice(0, 4).toUpperCase()}`,
+        total_amount: Number(o.total),
+        payment_method: "cash", 
+        timestamp: o.created_at
+      }));
+
+      const items: TransactionItem[] = [];
+      (orders || []).forEach(o => {
+        (o.order_items || []).forEach((item: any) => {
+          items.push({
+            id: item.id,
+            transaction_id: o.id,
+            product_id: item.product_id,
+            product_name: item.product_name,
+            quantity: item.quantity,
+            price: Number(item.price)
+          });
+        });
+      });
+
+      setTransactions(txs);
+      setTransactionItems(items);
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+    } finally {
+      setIsLoading(false);
     }
-    if (savedItems) setTransactionItems(JSON.parse(savedItems));
   }, []);
 
-  const saveTransaction = (cart: CartItem[], total: number, paymentMethod: "cash" | "gcash") => {
-    const transactionId = generateId();
-    // Generate a shorter, readable order ID for the UI
-    const orderNum = Math.floor(Math.random() * 9000) + 1000;
-    const orderId = `#ORD-${orderNum}`;
+  useEffect(() => {
+    fetchTransactions();
+  }, [fetchTransactions]);
 
-    const newTransaction: Transaction = {
-      id: transactionId,
-      order_id: orderId,
-      total_amount: total,
-      payment_method: paymentMethod,
-      timestamp: new Date().toISOString(),
-    };
+  const saveTransaction = async (cart: CartItem[], total: number, _paymentMethod: "cash" | "gcash") => {
+    try {
+      // Prepare items for RPC
+      const rpcItems = cart.map(item => ({
+        product_id: item.id,
+        variant_id: item.variantId,
+        product_name: item.name,
+        size: item.size,
+        price: item.price,
+        quantity: item.qty
+      }));
 
-    const newItems: TransactionItem[] = cart.map((item) => ({
-      id: generateId(),
-      transaction_id: transactionId,
-      product_id: item.id,
-      product_name: item.name,
-      quantity: item.qty,
-      price: item.price,
-    }));
+      // Call the atomic stored procedure
+      const { data: orderId, error: rpcError } = await supabase.rpc('create_complete_order', {
+        p_staff_id: user?.id,
+        p_total: total,
+        p_items: rpcItems
+      });
 
-    const updatedTransactions = [newTransaction, ...transactions];
-    const updatedItems = [...newItems, ...transactionItems];
+      if (rpcError) throw rpcError;
 
-    setTransactions(updatedTransactions);
-    setTransactionItems(updatedItems);
-
-    localStorage.setItem("timpla_transactions", JSON.stringify(updatedTransactions));
-    localStorage.setItem("timpla_transaction_items", JSON.stringify(updatedItems));
+      // Handle low stock warnings (returned by deduct_stock_on_sale inside the RPC)
+      // Actually, create_complete_order returns the orderId. 
+      // If we want low stock warnings, we could modify create_complete_order to return them,
+      // but for now, the primary goal is atomicity and safety.
+      
+      await fetchTransactions();
+      await refreshData();
+      toast.success("Transaction saved successfully");
+    } catch (error: any) {
+      console.error("Transaction error:", error);
+      toast.error("Failed to save transaction: " + (error.message || "Unknown error"));
+    }
   };
 
-  const clearTransactions = () => {
-    setTransactions([]);
-    setTransactionItems([]);
-    localStorage.removeItem("timpla_transactions");
-    localStorage.removeItem("timpla_transaction_items");
+  const clearTransactions = async () => {
+    // This might be dangerous in production, but following original logic
+    const { error } = await supabase.from('orders').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (error) {
+      toast.error("Failed to clear transactions");
+    } else {
+      setTransactions([]);
+      setTransactionItems([]);
+      toast.success("Transactions cleared");
+    }
   };
 
   const totalSales = transactions.reduce((sum, t) => sum + t.total_amount, 0);
@@ -91,6 +131,7 @@ export function useTransactions() {
     transactionItems,
     saveTransaction,
     clearTransactions,
+    isLoading,
     metrics: {
       totalSales,
       totalOrders,

@@ -77,7 +77,7 @@ export function RecipeBuilder({
       </div>
 
       <div className="space-y-3">
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center gap-2 flex-wrap">
           <label className="text-sm font-bold uppercase text-muted-foreground">Ingredients & Quantities</label>
           <Button type="button" variant="outline" size="sm" onClick={addIngredientRow} className="h-8">
             <Plus className="h-4 w-4 mr-1" /> Add

@@ -32,8 +32,8 @@ export function AddProductModal({
           ingredients={ingredients}
           recipes={recipes}
           categories={categories}
-          onComplete={(productData) => {
-            onAddProduct(productData);
+          onComplete={async (productData) => {
+            await onAddProduct(productData);
             onOpenChange(false);
           }}
           onAddRecipe={addRecipe}

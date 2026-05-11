@@ -1,6 +1,6 @@
 import { StrictMode, lazy, Suspense } from "react"
 import { createRoot } from "react-dom/client"
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom"
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom"
 
 import "./index.css"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -18,6 +18,7 @@ const ManageMenuPage = lazy(() => import("./POS/menuManagement"))
 // --- SECURITY GUARD ---
 const ProtectedRoute = () => {
   const { user, isLocked } = useAuth()
+  const location = useLocation()
   
   if (!user) {
     return <Navigate to="/login" replace />
@@ -26,6 +27,20 @@ const ProtectedRoute = () => {
   // If the session is locked, we still want to be on the page but maybe show an overlay
   if (isLocked) {
     return <Navigate to="/login" replace />
+  }
+
+  // Granular Access Control
+  if (location.pathname === "/inventory" && !(user.role === "admin" || user.canManageInventory)) {
+    return <Navigate to="/" replace />
+  }
+
+  if (location.pathname === "/menuManagement" && !(user.role === "admin" || user.canManageMenu)) {
+    return <Navigate to="/" replace />
+  }
+
+  // Dashboard access (Admin only)
+  if (location.pathname === "/dashboard" && user.role !== "admin") {
+    return <Navigate to="/" replace />
   }
 
   return <Outlet />

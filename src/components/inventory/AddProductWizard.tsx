@@ -249,7 +249,7 @@ export function AddProductWizard({
                 <div className="grid gap-2 p-4 bg-muted/30 rounded-xl border">
                   {showInlineRecipeBuilder ? (
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center">
+                      <div className="flex justify-between items-center gap-2 flex-wrap">
                         <h3 className="text-xs font-bold uppercase">Recipe Builder</h3>
                         <Button variant="ghost" size="sm" onClick={() => setShowInlineRecipeBuilder(false)} className="h-6 w-6 p-0">
                           <X className="h-4 w-4" />

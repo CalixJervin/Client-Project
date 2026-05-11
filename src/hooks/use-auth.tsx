@@ -25,8 +25,9 @@ interface AuthContextType {
   lock: () => void
   unlock: (pin: string) => Promise<{ success: boolean; message: string }>
   addStaff: (staff: Omit<Staff, "id" | "avatarInitials">, pin: string) => Promise<{ success: boolean; message: string }>
+  updateStaff: (staffId: string, data: Partial<Staff>, pin?: string) => Promise<{ success: boolean; message: string }>
   deleteStaff: (staffId: string) => Promise<void>
-  switchUser: () => void
+  switchUser: () => void;
   verifyMasterPIN: (pin: string) => boolean
 }
 
@@ -217,6 +218,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await fetchStaff()
   }, [fetchStaff])
 
+  const updateStaff = useCallback(async (staffId: string, data: Partial<Staff>, pin?: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      const updateData: any = {}
+      
+      if (data.name) updateData.name = data.name
+      if (data.role) updateData.role = data.role
+      if (data.avatarColor) updateData.avatar_color = data.avatarColor
+
+      if (pin) {
+        const salt = await bcrypt.genSalt(10)
+        updateData.pin_hash = await bcrypt.hash(pin, salt)
+      }
+
+      const { error } = await supabase
+        .from('staff')
+        .update(updateData)
+        .eq('id', staffId)
+
+      if (error) {
+        return { success: false, message: "Failed to update staff: " + error.message }
+      }
+
+      await fetchStaff()
+      
+      // Update current user if they edited themselves
+      if (user && user.id === staffId) {
+        const updatedUser = (await storage.getStaff()).find(s => s.id === staffId)
+        if (updatedUser) setUser(updatedUser)
+      }
+
+      return { success: true, message: "Staff updated successfully." }
+    } catch (error: any) {
+      return { success: false, message: "Error updating staff: " + error.message }
+    }
+  }, [user, fetchStaff])
+
   const verifyMasterPIN = useCallback((pin: string) => pin === MASTER_RECOVERY_PIN, [])
 
   const contextValue = useMemo(() => ({ 
@@ -230,10 +267,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     lock, 
     unlock, 
     addStaff, 
+    updateStaff,
     deleteStaff,
     switchUser,
     verifyMasterPIN
-  }), [user, staffList, isLocked, isInitialSetup, isLoading, login, logout, lock, unlock, addStaff, deleteStaff, switchUser, verifyMasterPIN])
+  }), [user, staffList, isLocked, isInitialSetup, isLoading, login, logout, lock, unlock, addStaff, updateStaff, deleteStaff, switchUser, verifyMasterPIN])
 
   return (
     <AuthContext.Provider value={contextValue}>

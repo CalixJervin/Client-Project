@@ -166,27 +166,20 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   }, [fetchAll]);
 
   const restockIngredient = useCallback(async (id: string, entry: any) => {
-    const ingredient = ingredients.find(i => i.id === id);
-    if (!ingredient) return;
+    const { error } = await supabase.rpc('restock_ingredient_v2', {
+      p_id: id,
+      p_quantity_added: entry.quantityAdded,
+      p_supplier: entry.supplier,
+      p_notes: entry.notes
+    });
 
-    const { error: logError } = await supabase.from('restock_logs').insert([{
-      ingredient_id: id,
-      quantity_added: entry.quantityAdded,
-      supplier: entry.supplier,
-      notes: entry.notes
-    }]);
-
-    const { error: updateError } = await supabase.from('ingredients').update({
-      current_stock: ingredient.currentStock + entry.quantityAdded
-    }).eq('id', id);
-
-    if (logError || updateError) {
-      toast.error("Failed to restock ingredient");
+    if (error) {
+      toast.error("Failed to restock ingredient: " + error.message);
     } else {
       await fetchAll();
       toast.success("Ingredient restocked");
     }
-  }, [ingredients, fetchAll]);
+  }, [fetchAll]);
 
   const deleteIngredient = useCallback(async (id: string) => {
     const { error } = await supabase.from('ingredients').delete().eq('id', id);
@@ -199,31 +192,20 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   }, [fetchAll]);
 
   const addRecipe = useCallback(async (data: any) => {
-    const { data: recipe, error: recipeError } = await supabase.from('recipes').insert([{
-      name: data.name,
-      yield: data.yield
-    }]).select().single();
+    const { data: recipeId, error } = await supabase.rpc('create_recipe_v2', {
+      p_name: data.name,
+      p_yield: data.yield,
+      p_ingredients: data.ingredients
+    });
 
-    if (recipeError || !recipe) {
-      toast.error("Failed to create recipe");
+    if (error) {
+      toast.error("Failed to create recipe: " + error.message);
       return;
     }
 
-    const recipeIngredients = data.ingredients.map((ri: any) => ({
-      recipe_id: recipe.id,
-      ingredient_id: ri.ingredientId,
-      quantity: ri.quantity
-    }));
-
-    const { error: riError } = await supabase.from('recipe_ingredients').insert(recipeIngredients);
-
-    if (riError) {
-      toast.error("Failed to add recipe ingredients");
-    } else {
-      await fetchAll();
-      toast.success("Recipe created");
-    }
-    return recipe.id;
+    await fetchAll();
+    toast.success("Recipe created");
+    return recipeId;
   }, [fetchAll]);
 
   const updateRecipe = useCallback(async (id: string, data: any) => {
@@ -262,105 +244,106 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   }, [fetchAll]);
 
   const addProduct = useCallback(async (data: any) => {
-    let imageUrl = data.image;
-    if (data.image && data.image.startsWith('data:')) {
-      imageUrl = await storage.uploadImage(data.image);
-    }
+    try {
+      let imageUrl = data.image;
+      if (data.image && data.image.startsWith('data:')) {
+        try {
+          imageUrl = await storage.uploadImage(data.image);
+        } catch (uploadError: any) {
+          console.error("Image upload failed:", uploadError);
+          toast.error("Image upload failed, using default image instead.");
+          imageUrl = "https://placehold.co/600x600/e2e8f0/64748b?text=No+Image";
+        }
+      }
 
-    const { data: product, error: productError } = await supabase.from('products').insert([{
-      name: data.name,
-      category: data.category,
-      type: data.type,
-      image_url: imageUrl,
-      in_stock: data.inStock,
-      availability: data.availability,
-      quantity: data.quantity,
-      low_stock_threshold: data.lowStockThreshold
-    }]).select().single();
+      const { error } = await supabase.rpc('create_product_v2', {
+        p_name: data.name,
+        p_category: data.category,
+        p_type: data.type,
+        p_image_url: imageUrl,
+        p_in_stock: data.inStock,
+        p_availability: data.availability,
+        p_quantity: data.quantity ?? null,
+        p_low_stock_threshold: data.lowStockThreshold ?? null,
+        p_variants: data.variants
+      });
 
-    if (productError || !product) {
-      toast.error("Failed to create product");
-      return;
-    }
-
-    const variants = data.variants.map((v: any) => ({
-      product_id: product.id,
-      size: v.size,
-      price: v.price,
-      recipe_id: v.recipeId
-    }));
-
-    const { error: vError } = await supabase.from('product_variants').insert(variants);
-
-    if (vError) {
-      toast.error("Failed to add product variants");
-    } else {
-      await fetchAll();
-      toast.success("Product created");
+      if (error) {
+        toast.error("Failed to create product: " + error.message);
+      } else {
+        await fetchAll();
+        toast.success("Product created");
+      }
+    } catch (err: any) {
+      console.error("Add product error:", err);
+      toast.error("An unexpected error occurred while adding the product");
     }
   }, [fetchAll]);
 
   const updateProduct = useCallback(async (id: string, data: any) => {
-    let imageUrl = data.image;
-    if (data.image && data.image.startsWith('data:')) {
-      imageUrl = await storage.uploadImage(data.image);
+    try {
+      let imageUrl = data.image;
+      if (data.image && data.image.startsWith('data:')) {
+        try {
+          imageUrl = await storage.uploadImage(data.image);
+        } catch (uploadError: any) {
+          console.error("Image upload failed:", uploadError);
+          toast.error("Image upload failed, keeping current image.");
+          // If update, we might want to keep the old image, but for now we just use the data.image if it wasn't a data URL
+          // If it was a data URL and failed, we might not have the old URL here easily without fetching.
+        }
+      }
+
+      const { error: productError } = await supabase.from('products').update({
+        name: data.name,
+        category: data.category,
+        type: data.type,
+        image_url: imageUrl,
+        in_stock: data.inStock,
+        availability: data.availability,
+        quantity: data.quantity,
+        low_stock_threshold: data.lowStockThreshold
+      }).eq('id', id);
+
+      if (productError) {
+        toast.error("Failed to update product: " + productError.message);
+        return;
+      }
+
+      if (data.variants) {
+        await supabase.from('product_variants').delete().eq('product_id', id);
+        const variants = data.variants.map((v: any) => ({
+          product_id: id,
+          size: v.size,
+          price: v.price,
+          recipe_id: v.recipeId
+        }));
+        await supabase.from('product_variants').insert(variants);
+      }
+
+      await fetchAll();
+      toast.success("Product updated");
+    } catch (err: any) {
+      console.error("Update product error:", err);
+      toast.error("An unexpected error occurred while updating the product");
     }
-
-    const { error: productError } = await supabase.from('products').update({
-      name: data.name,
-      category: data.category,
-      type: data.type,
-      image_url: imageUrl,
-      in_stock: data.inStock,
-      availability: data.availability,
-      quantity: data.quantity,
-      low_stock_threshold: data.lowStockThreshold
-    }).eq('id', id);
-
-    if (productError) {
-      toast.error("Failed to update product");
-      return;
-    }
-
-    if (data.variants) {
-      await supabase.from('product_variants').delete().eq('product_id', id);
-      const variants = data.variants.map((v: any) => ({
-        product_id: id,
-        size: v.size,
-        price: v.price,
-        recipe_id: v.recipeId
-      }));
-      await supabase.from('product_variants').insert(variants);
-    }
-
-    await fetchAll();
-    toast.success("Product updated");
   }, [fetchAll]);
 
   const restockProduct = useCallback(async (id: string, entry: Omit<RestockEntry, 'date'>) => {
-    const product = products.find(p => p.id === id);
-    if (!product) return;
+    const { error } = await supabase.rpc('restock_product_v2', {
+      p_id: id,
+      p_quantity_added: entry.quantityAdded,
+      p_supplier: entry.supplier,
+      p_notes: entry.notes
+    });
 
-    const { error: logError } = await supabase.from('restock_logs').insert([{
-      product_id: id,
-      quantity_added: entry.quantityAdded,
-      supplier: entry.supplier,
-      notes: entry.notes
-    }]);
-
-    const newQty = (product.quantity || 0) + entry.quantityAdded;
-    const { error: updateError } = await supabase.from('products').update({
-      quantity: newQty,
-      in_stock: newQty > 0 ? true : product.inStock
-    }).eq('id', id);
-
-    if (logError || updateError) {
-      toast.error("Failed to restock product");
+    if (error) {
+      toast.error("Failed to restock product: " + error.message);
     } else {
       await fetchAll();
       toast.success("Stock updated successfully");
     }
-  }, [products, fetchAll]);
+  }, [fetchAll]);
 
   const deleteProduct = useCallback(async (id: string) => {
     const { error } = await supabase.from('products').delete().eq('id', id);

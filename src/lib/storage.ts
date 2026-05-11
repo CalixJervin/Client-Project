@@ -140,7 +140,10 @@ export const storage = {
       .from('product-images')
       .upload(fileName, blob, { contentType: 'image/png', upsert: true });
     
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase storage upload error:", error);
+      throw error;
+    }
     
     const { data: { publicUrl } } = supabase.storage
       .from('product-images')

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { TicketSidebar } from "@/POS/Ticket"
 import { useCart } from "@/hooks/useCart"
 import { AddProductModal } from "@/POS/addProduct" 
@@ -6,13 +6,29 @@ import DeleteProductModal from "@/POS/deleteProduct"
 import { AddCategoryModal } from "@/POS/addCategory"
 import { ProductGrid } from "@/POS/items"
 import { Input } from "@/components/ui/input"
-import { Plus, Search, X, ShoppingBag } from "lucide-react"
+import { Plus, Search, X, ShoppingBag, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button" 
 import type { Product } from "@/hooks/useCart"
 import { Toaster, toast } from "sonner"
 import { SiteHeader } from "@/components/site-header"
 
 import { useInventory } from "@/hooks/useInventory"
+
+function LiveClock() {
+  const [time, setTime] = useState(new Date())
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  return (
+    <div className="flex items-center gap-1.5 text-[#6B5B4E] text-[13px] font-medium mr-2">
+      <Clock className="h-3.5 w-3.5" />
+      {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+    </div>
+  )
+}
 
 export default function Page() {
   const { 
@@ -52,9 +68,8 @@ export default function Page() {
     size: p.variants[0]?.size || "Regular"
   }))
 
-  const handleProductAdded = (productData: any) => {
-    addProduct(productData)
-    toast.success("Product added successfully")
+  const handleProductAdded = async (productData: any) => {
+    await addProduct(productData)
   }
 
   const handleStageForDeletion = (id: string, _name: string) => {
@@ -106,99 +121,108 @@ export default function Page() {
     
   return (
     // 1. The main container is now a ROW first
-    <div className="flex flex-row h-full overflow-hidden w-full">
+    <div className="flex flex-row h-full overflow-hidden w-full bg-[#EDE5DA]">
       
       {/* --- LEFT SIDE: Header + Main Content --- */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
         
         {/* SiteHeader is now constrained inside the Left panel */}
-        <SiteHeader>
-          <div className={`flex items-center gap-2 ${isMobileSearchOpen ? "hidden md:flex" : "flex"}`}>
-            <h1 className="text-base font-semibold hidden lg:block">POS</h1>
-            
-            <Button 
-              variant="secondary"
-              size="sm"
-              className="flex lg:hidden items-center gap-2 rounded-full border shadow-sm px-3 h-8 cursor-pointer"
-              onClick={() => setIsMobileTicketOpen(true)}
-            >
-              <ShoppingBag className="h-3.5 w-3.5" />
-              <span className="font-bold text-xs">Ticket</span>
-              {totalCartItems > 0 && (
-                <span className="bg-primary text-primary-foreground text-[10px] font-bold h-4 w-4 flex items-center justify-center rounded-full ml-1">
-                  {totalCartItems}
-                </span>
-              )}
-            </Button>
-          </div>
-
-          <div className={`flex items-center ${isMobileSearchOpen ? "w-full md:w-auto" : "ml-auto"}`}>
-            {!isMobileSearchOpen && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="md:hidden h-8 w-8 cursor-pointer"
-                onClick={() => setIsMobileSearchOpen(true)}
-              >
-                <Search className="h-4 w-4 text-muted-foreground" />
-              </Button>
-            )}
-
-            <div className={`${isMobileSearchOpen ? "flex w-full animate-in fade-in slide-in-from-right-4" : "hidden md:flex"} items-center gap-2`}>
-              <div className="relative flex-1">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
-                <Input 
-                  type="search" 
-                  placeholder="Search items..." 
-                  // Adding rounded-full to match your image exactly
-                  className="h-9 bg-muted w-full md:w-[200px] lg:w-[250px] pl-9 rounded-full border-border/50" 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  autoFocus={isMobileSearchOpen}
-                />
-              </div>
+        <div className="bg-[#E8DFD3] border-b border-[#D4C9BB]">
+          <SiteHeader>
+            <div className={`flex items-center gap-2 ${isMobileSearchOpen ? "hidden md:flex" : "flex"}`}>
+              <h1 className="text-base font-bold text-[#1C1412] hidden lg:block">POS</h1>
               
-              {isMobileSearchOpen && (
+              <Button 
+                variant="secondary"
+                size="sm"
+                className="flex lg:hidden items-center gap-2 rounded-full border shadow-sm px-4 h-11 cursor-pointer active:scale-95 touch-manipulation"
+                onClick={() => setIsMobileTicketOpen(true)}
+              >
+                <ShoppingBag className="h-4 w-4" />
+                <span className="font-bold text-sm">Ticket</span>
+                {totalCartItems > 0 && (
+                  <span className="bg-primary text-primary-foreground text-xs font-bold h-5 w-5 flex items-center justify-center rounded-full ml-1">
+                    {totalCartItems}
+                  </span>
+                )}
+              </Button>
+            </div>
+
+            <div className={`flex items-center gap-4 ${isMobileSearchOpen ? "w-full md:w-auto" : "ml-auto"}`}>
+              <div className="hidden md:block">
+                <LiveClock />
+              </div>
+
+              {!isMobileSearchOpen && (
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="md:hidden shrink-0 cursor-pointer"
-                  onClick={() => {
-                    setIsMobileSearchOpen(false);
-                    setSearchQuery("");
-                  }}
+                  className="md:hidden h-8 w-8 cursor-pointer"
+                  onClick={() => setIsMobileSearchOpen(true)}
                 >
-                  <X className="h-5 w-5 text-muted-foreground" />
+                  <Search className="h-4 w-4 text-muted-foreground" />
                 </Button>
               )}
+
+              <div className={`${isMobileSearchOpen ? "flex w-full animate-in fade-in slide-in-from-right-4" : "hidden md:flex"} items-center gap-2`}>
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-[#9E8E7E] pointer-events-none" />
+                  <Input 
+                    type="search" 
+                    placeholder="Search items..." 
+                    className="h-11 bg-[#DDD5C8] w-full md:w-[200px] lg:w-[250px] pl-9 rounded-full border-[#C4B5A5] text-[#2C1F17] placeholder:text-[#9E8E7E] focus-visible:ring-1 focus-visible:ring-[#C4B5A5] touch-manipulation" 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    autoFocus={isMobileSearchOpen}
+                  />
+                </div>
+                
+                {isMobileSearchOpen && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="md:hidden shrink-0 cursor-pointer"
+                    onClick={() => {
+                      setIsMobileSearchOpen(false);
+                      setSearchQuery("");
+                    }}
+                  >
+                    <X className="h-5 w-5 text-muted-foreground" />
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
-        </SiteHeader>
+          </SiteHeader>
+        </div>
 
         {/* Scrollable Categories & Products Area */}
-        <div className="flex-1 flex flex-col gap-4 p-4 overflow-y-auto">
-          <div className="flex w-full overflow-x-auto pb-2 gap-2 scrollbar-hide shrink-0">
-            {allCategories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors cursor-pointer ${
-                  activeCategory === cat
-                    ? "bg-foreground text-background" 
-                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-                }`}
+        <div className="flex-1 flex flex-col gap-4 p-4 overflow-y-auto bg-[#EDE5DA]">
+          <div className="relative shrink-0">
+            <div className="flex w-full overflow-x-auto pb-2 gap-2 scrollbar-hide bg-[#E8DFD3] p-3 rounded-xl border border-[#D4C9BB] relative">
+              {allCategories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`whitespace-nowrap px-5 py-2.5 rounded-full text-[13px] font-medium transition-all cursor-pointer ${
+                    activeCategory === cat
+                      ? "bg-[#1C1412] text-white shadow-md" 
+                      : "bg-transparent text-[#6B5B4E] border-[1.5px] border-[#C4B5A5] hover:bg-[#D4C9BB]"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+              
+              <button 
+                onClick={() => setIsAddCategoryOpen(true)}
+                className="flex items-center gap-1 whitespace-nowrap px-5 py-2.5 rounded-full text-[13px] font-medium border-[1.5px] border-dashed border-[#C4B5A5] text-[#6B5B4E] hover:border-[#1C1412] hover:text-[#1C1412] transition-colors cursor-pointer"
               >
-                {cat}
+                <Plus className="h-4 w-4" />
+                Add Category
               </button>
-            ))}
-            
-            <button 
-              onClick={() => setIsAddCategoryOpen(true)}
-              className="flex items-center gap-1 whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium border-2 border-dashed border-muted-foreground/30 text-muted-foreground hover:border-primary hover:text-primary transition-colors cursor-pointer"
-            >
-              <Plus className="h-4 w-4" />
-              Add Category
-            </button>
+            </div>
+            {/* Fade gradient for horizontal scroll */}
+            <div className="absolute right-0 top-0 bottom-2 w-12 bg-gradient-to-l from-[#E8DFD3] to-transparent pointer-events-none rounded-r-xl" />
           </div>
 
           <ProductGrid 
@@ -213,7 +237,7 @@ export default function Page() {
 
       {/* --- RIGHT SIDE: Ticket Sidebar --- */}
       {/* 2. Moved to the top level flex-row, so it takes the FULL height */}
-      <div className="hidden lg:block h-full border-l shrink-0 z-10 bg-background">
+      <div className="hidden lg:block h-full border-l border-[#CEC3B4] shrink-0 z-10 bg-[#E2D9CC]">
         <TicketSidebar 
           cart={cart}
           updateQty={updateQty}

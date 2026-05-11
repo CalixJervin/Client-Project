@@ -23,20 +23,27 @@ import {
   DialogTrigger 
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Trash2, UserPlus, ShieldAlert, Coffee } from "lucide-react"
+import { Trash2, UserPlus, ShieldAlert, Coffee, Edit2 } from "lucide-react"
 import { toast } from "sonner"
 
 export function StaffManagement() {
-  const { staffList, addStaff, deleteStaff, user: currentUser } = useAuth()
+  const { staffList, addStaff, deleteStaff, updateStaff, user: currentUser } = useAuth()
   
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
   const [staffToDelete, setStaffToDelete] = useState<Staff | null>(null)
+  const [staffToEdit, setStaffToEdit] = useState<Staff | null>(null)
   
   const [newName, setNewName] = useState("")
   const [newRole, setNewRole] = useState<Role>("cashier")
   const [newPin, setNewPin] = useState("")
   const [confirmPin, setConfirmPin] = useState("")
+
+  const [editName, setEditName] = useState("")
+  const [editRole, setEditRole] = useState<Role>("cashier")
+  const [editPin, setEditPin] = useState("")
+  const [editConfirmPin, setEditConfirmPin] = useState("")
 
   const handleAddAccount = async () => {
     if (!newName.trim()) return toast.error("Name is required")
@@ -55,6 +62,37 @@ export function StaffManagement() {
       setNewPin("")
       setConfirmPin("")
       setIsAddDialogOpen(false)
+    } else {
+      toast.error(result.message)
+    }
+  }
+
+  const handleEditClick = (staff: Staff) => {
+    setStaffToEdit(staff)
+    setEditName(staff.name)
+    setEditRole(staff.role)
+    setEditPin("")
+    setEditConfirmPin("")
+    setIsEditDialogOpen(true)
+  }
+
+  const handleUpdateAccount = async () => {
+    if (!staffToEdit) return
+    if (!editName.trim()) return toast.error("Name is required")
+    
+    if (editPin) {
+      if (editPin.length < 4) return toast.error("PIN must be at least 4 digits")
+      if (editPin !== editConfirmPin) return toast.error("PINs do not match")
+    }
+
+    const result = await updateStaff(staffToEdit.id, {
+      name: editName.trim(),
+      role: editRole,
+    }, editPin || undefined)
+
+    if (result.success) {
+      toast.success(result.message)
+      setIsEditDialogOpen(false)
     } else {
       toast.error(result.message)
     }
@@ -178,20 +216,88 @@ export function StaffManagement() {
                   {staff.shiftStart ? new Date(staff.shiftStart).toLocaleString() : "Never"}
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="text-destructive hover:bg-destructive/10"
-                    onClick={() => handleDeleteClick(staff)}
-                    disabled={staff.id === currentUser?.id}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex justify-end gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => handleEditClick(staff)}
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="text-destructive hover:bg-destructive/10"
+                      onClick={() => handleDeleteClick(staff)}
+                      disabled={staff.id === currentUser?.id}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Account</DialogTitle>
+              <DialogDescription>
+                Update staff member information.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <label className="text-sm font-medium">Name</label>
+                <Input 
+                  placeholder="e.g. David" 
+                  value={editName} 
+                  onChange={(e) => setEditName(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <label className="text-sm font-medium">Role</label>
+                <Select value={editRole} onValueChange={(value: Role) => setEditRole(value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cashier">Cashier</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <label className="text-sm font-medium">New PIN (Leave blank to keep current)</label>
+                <Input 
+                  type="password" 
+                  inputMode="numeric"
+                  placeholder="••••" 
+                  value={editPin} 
+                  onChange={(e) => setEditPin(e.target.value.replace(/[^0-9]/g, ''))}
+                />
+              </div>
+              {editPin && (
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">Confirm New PIN</label>
+                  <Input 
+                    type="password" 
+                    inputMode="numeric"
+                    placeholder="••••" 
+                    value={editConfirmPin} 
+                    onChange={(e) => setEditConfirmPin(e.target.value.replace(/[^0-9]/g, ''))}
+                  />
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleUpdateAccount}>Save Changes</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
           <DialogContent>
@@ -211,3 +317,4 @@ export function StaffManagement() {
     </Card>
   )
 }
+

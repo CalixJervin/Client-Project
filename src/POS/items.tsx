@@ -23,51 +23,49 @@ export function ProductGrid({
         <div
           key={product.id}
           onClick={() => product.inStock !== false && onAddToCart(product)}
-          // We use backticks ` ` here to allow the dynamic ${} logic
-          className={`group relative aspect-square rounded-xl overflow-hidden cursor-pointer shadow-sm transition-all duration-150 border-2 ${
+          className={`group relative flex flex-col rounded-[12px] overflow-hidden cursor-pointer bg-[#F5EFE6] border border-[#DDD5C8] shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all duration-150 hover:shadow-[0_4px_16px_rgba(0,0,0,0.10)] hover:-translate-y-0.5 ${
             selectedProductId === product.id 
-              ? "border-primary scale-95 opacity-80 z-10" 
-              : "border-border/50 hover:border-primary/50"
-          } ${product.inStock === false ? "cursor-not-allowed" : ""}`}
+              ? "ring-2 ring-[#1C1412] scale-[0.98]" 
+              : ""
+          } ${product.inStock === false ? "opacity-45 pointer-events-none" : ""}`}
         >
-          <img
-            src={product.image || "https://placehold.co/600x600/e2e8f0/64748b?text=No+Image"}
-            alt={product.name}
-            className={`absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110 ${product.inStock === false ? "grayscale opacity-50" : ""}`}
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none" />
-          
-          {product.inStock === false && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-background/20 backdrop-blur-[1px]">
-              <div className="absolute inset-0 flex items-center justify-center opacity-40 pointer-events-none">
-                <div className="w-[140%] h-[2px] bg-destructive rotate-45" />
-                <div className="w-[140%] h-[2px] bg-destructive -rotate-45" />
+          <div className="relative aspect-square overflow-hidden">
+            <img
+              src={product.image || "https://placehold.co/600x600/e2e8f0/64748b?text=No+Image"}
+              alt={product.name}
+              loading="lazy"
+              decoding="async"
+              className={`h-full w-full object-cover transition-transform duration-500 group-hover:scale-110`}
+            />
+            
+            {product.inStock === false && (
+              <div className="absolute top-2 left-2 z-20">
+                <span className="bg-[#C0392B] text-white text-[10px] font-bold uppercase px-2 py-0.5 rounded shadow-sm">
+                  Out of Stock
+                </span>
               </div>
-              <span className="bg-destructive text-white text-[10px] font-black uppercase px-2 py-0.5 rounded shadow-lg transform -rotate-12 border border-white/20">
-                Unavailable
-              </span>
-            </div>
-          )}
+            )}
 
-          {/* Delete Button */}
-          {product.inStock !== false && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDeleteProduct(product.id, product.name);
-              }}
-              className="absolute top-2 right-2 z-10 p-1.5 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-destructive hover:scale-100"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          )}
+            {/* Delete Button */}
+            {product.inStock !== false && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteProduct(product.id, product.name);
+                }}
+                className="absolute top-2 right-2 z-10 p-2 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all bg-black/20 hover:bg-[#C0392B] active:scale-95 flex items-center justify-center touch-manipulation"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
+          </div>
 
-          <div className="absolute bottom-0 w-full p-3 flex flex-col gap-1 text-white pointer-events-none">
-            <div className="flex justify-between items-start gap-2">
-              <span className="font-semibold text-sm leading-tight truncate">{product.name}</span>
-              <span className="font-bold text-sm shrink-0">₱{product.price}</span>
+          <div className="p-3 flex flex-col gap-1">
+            <span className="font-semibold text-[13px] text-[#1C1412] leading-tight truncate">{product.name}</span>
+            <div className="flex flex-col">
+              <span className="text-[14px] font-bold text-[#1C1412] tracking-tight">₱{product.price.toFixed(2)}</span>
+              <span className="text-[9px] text-[#9E8E7E] font-medium uppercase tracking-wider">{product.category}</span>
             </div>
-            <span className="text-xs text-gray-300 font-medium">{product.category}</span>
           </div>
         </div>
       ))}
@@ -75,10 +73,10 @@ export function ProductGrid({
       {/* Add New Item Button */}
       <button 
         onClick={onAddNewClick}
-        className="aspect-square rounded-xl border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-primary hover:text-primary hover:bg-muted/20 transition-all cursor-pointer"
+        className="aspect-square rounded-[12px] border-2 border-dashed border-[#C4B5A5] flex flex-col items-center justify-center gap-2 text-[#6B5B4E] hover:border-[#1C1412] hover:text-[#1C1412] hover:bg-white/20 active:scale-[0.98] transition-all cursor-pointer touch-manipulation"
       >
         <Plus className="h-8 w-8" />
-        <span className="text-sm font-medium">Add New Item</span>
+        <span className="text-sm font-medium">Add Product</span>
       </button>
     </div>
   );

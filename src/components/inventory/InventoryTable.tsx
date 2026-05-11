@@ -69,13 +69,13 @@ export function InventoryTable({
     let textColorClass = "text-[#22c55e]";
 
     if (current === 0) {
-      colorClass = "bg-[#ef4444]"; // Out (Red)
+      colorClass = "bg-[#C0392B]"; // Out (Red)
       statusLabel = "Out";
-      textColorClass = "text-[#ef4444]";
+      textColorClass = "text-[#C0392B]";
     } else if (current <= threshold * 0.25) {
-      colorClass = "bg-[#ef4444]"; // Critical (Red)
+      colorClass = "bg-[#C0392B]"; // Critical (Red)
       statusLabel = "Critical";
-      textColorClass = "text-[#ef4444]";
+      textColorClass = "text-[#C0392B]";
     } else if (current <= threshold) {
       colorClass = "bg-[#f59e0b]"; // Low (Yellow/Orange)
       statusLabel = "Low";
@@ -86,17 +86,17 @@ export function InventoryTable({
   };
 
   return (
-    <div className="bg-card rounded-xl shadow-sm overflow-hidden border border-border/50">
+    <div className="bg-[#F5EFE6] rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.06)] overflow-hidden border border-[#DDD5C8]">
       <div className="overflow-x-auto">
         <Table>
-          <TableHeader className="bg-muted/30">
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="w-12 text-[11px] font-bold uppercase text-muted-foreground/70 text-center">#</TableHead>
-              <TableHead className="text-[11px] font-bold uppercase text-muted-foreground/70">Name</TableHead>
-              <TableHead className="text-[11px] font-bold uppercase text-muted-foreground/70 text-center">Stock</TableHead>
-              <TableHead className="text-[11px] font-bold uppercase text-muted-foreground/70 text-center">Unit</TableHead>
-              <TableHead className="text-[11px] font-bold uppercase text-muted-foreground/70 w-48">Level</TableHead>
-              <TableHead className="text-[11px] font-bold uppercase text-muted-foreground/70 text-right pr-6">Actions</TableHead>
+          <TableHeader className="bg-[#E8DFD3]">
+            <TableRow className="hover:bg-transparent border-b border-[#D4C9BB]">
+              <TableHead className="w-12 text-[10px] font-bold uppercase text-[#9E8E7E] text-center">#</TableHead>
+              <TableHead className="text-[10px] font-bold uppercase text-[#9E8E7E]">Name</TableHead>
+              <TableHead className="text-[10px] font-bold uppercase text-[#9E8E7E] text-center">Stock</TableHead>
+              <TableHead className="text-[10px] font-bold uppercase text-[#9E8E7E] text-center">Unit</TableHead>
+              <TableHead className="text-[10px] font-bold uppercase text-[#9E8E7E] w-48">Level</TableHead>
+              <TableHead className="text-[10px] font-bold uppercase text-[#9E8E7E] text-right pr-6">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -104,20 +104,20 @@ export function InventoryTable({
               const { percentage, colorClass, statusLabel, textColorClass } = getStockLevelInfo(item.currentStock, item.lowStockThreshold);
               
               return (
-                <TableRow key={item.id} className="hover:bg-muted/20 transition-colors border-b last:border-0">
-                  <TableCell className="text-center font-medium text-muted-foreground">{index + 1}</TableCell>
-                  <TableCell className="font-semibold text-foreground">{item.name}</TableCell>
-                  <TableCell className="text-center font-bold">{item.currentStock}</TableCell>
-                  <TableCell className="text-center text-muted-foreground">{item.unit}</TableCell>
+                <TableRow key={item.id} className="hover:bg-[#E2D9CC]/30 transition-colors border-b border-[#DDD5C8]/50 last:border-0">
+                  <TableCell className="text-center font-medium text-[#9E8E7E] text-xs">{index + 1}</TableCell>
+                  <TableCell className="font-bold text-[#1C1412] text-sm">{item.name}</TableCell>
+                  <TableCell className="text-center font-black text-[#1C1412] text-sm">{item.currentStock}</TableCell>
+                  <TableCell className="text-center text-[#6B5B4E] text-xs font-medium">{item.unit}</TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1.5 min-w-32">
-                      <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                      <div className="h-2 w-full bg-[#E8DFD3] rounded-full overflow-hidden">
                         <div 
                           className={cn("h-full rounded-full transition-all duration-500", colorClass)} 
                           style={{ width: `${percentage}%` }}
                         />
                       </div>
-                      <span className={cn("text-[10px] font-bold uppercase tracking-wider", textColorClass)}>
+                      <span className={cn("text-[9px] font-black uppercase tracking-widest", textColorClass)}>
                         {statusLabel}
                       </span>
                     </div>
@@ -127,7 +127,7 @@ export function InventoryTable({
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                        className="h-9 w-9 text-[#9E8E7E] hover:text-[#1C1412] hover:bg-[#1C1412]/5 cursor-pointer"
                         onClick={() => {
                           setSelectedItem(item);
                           setIsEditOpen(true);
@@ -138,7 +138,7 @@ export function InventoryTable({
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        className="h-9 w-9 text-[#9E8E7E] hover:text-[#C0392B] hover:bg-[#C0392B]/5 cursor-pointer"
                         onClick={() => {
                           if (item.originalType === 'ingredient') onDeleteIngredient(item.id);
                           else onDeleteProduct(item.id);

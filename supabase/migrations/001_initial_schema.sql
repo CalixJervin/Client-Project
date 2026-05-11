@@ -225,3 +225,181 @@ BEGIN
   WHERE products.type = 'ready-made' AND products.quantity <= products.low_stock_threshold;
 END;
 $$;
+
+-- RPC: create_complete_order
+-- Handles order creation, item insertion, and stock deduction in ONE atomic transaction
+CREATE OR REPLACE FUNCTION create_complete_order(
+  p_staff_id uuid,
+  p_total numeric,
+  p_items jsonb
+)
+RETURNS uuid
+LANGUAGE plpgsql
+AS $$
+#variable_conflict use_column
+DECLARE
+  v_order_id uuid;
+  v_item jsonb;
+BEGIN
+  -- 1. Create the main order
+  INSERT INTO orders (staff_id, total, status)
+  VALUES (p_staff_id, p_total, 'completed')
+  RETURNING id INTO v_order_id;
+
+  -- 2. Insert order items
+  FOR v_item IN SELECT * FROM jsonb_array_elements(p_items) LOOP
+    INSERT INTO order_items (
+      order_id, 
+      product_id, 
+      variant_id, 
+      product_name, 
+      size, 
+      price, 
+      quantity
+    )
+    VALUES (
+      v_order_id,
+      (v_item->>'product_id')::uuid,
+      (v_item->>'variant_id')::uuid,
+      v_item->>'product_name',
+      v_item->>'size',
+      (v_item->>'price')::numeric,
+      (v_item->>'quantity')::integer
+    );
+  END LOOP;
+
+  -- 3. Deduct stock using the existing failsafe function
+  -- If this fails (insufficient stock), the entire transaction rolls back
+  PERFORM deduct_stock_on_sale(p_items);
+
+  RETURN v_order_id;
+END;
+$$;
+
+-- RPC: restock_ingredient_v2
+-- Atomic restock and log entry
+CREATE OR REPLACE FUNCTION restock_ingredient_v2(
+  p_id uuid,
+  p_quantity_added numeric,
+  p_supplier text DEFAULT NULL,
+  p_notes text DEFAULT NULL
+)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  -- 1. Add to logs
+  INSERT INTO restock_logs (ingredient_id, quantity_added, supplier, notes)
+  VALUES (p_id, p_quantity_added, p_supplier, p_notes);
+
+  -- 2. Update stock
+  UPDATE ingredients
+  SET current_stock = ingredients.current_stock + p_quantity_added
+  WHERE id = p_id;
+END;
+$$;
+
+-- RPC: restock_product_v2
+-- Atomic product restock and log entry
+CREATE OR REPLACE FUNCTION restock_product_v2(
+  p_id uuid,
+  p_quantity_added numeric,
+  p_supplier text DEFAULT NULL,
+  p_notes text DEFAULT NULL
+)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+#variable_conflict use_column
+DECLARE
+  v_current_qty numeric;
+  v_in_stock boolean;
+BEGIN
+  -- 1. Add to logs
+  INSERT INTO restock_logs (product_id, quantity_added, supplier, notes)
+  VALUES (p_id, p_quantity_added, p_supplier, p_notes);
+
+  -- 2. Get current info
+  SELECT quantity, in_stock INTO v_current_qty, v_in_stock FROM products WHERE id = p_id;
+
+  -- 3. Update stock (Trigger handles in_stock logic)
+  UPDATE products
+  SET quantity = COALESCE(v_current_qty, 0) + p_quantity_added
+  WHERE id = p_id;
+END;
+$$;
+
+-- RPC: create_recipe_v2
+CREATE OR REPLACE FUNCTION create_recipe_v2(
+  p_name text,
+  p_yield integer,
+  p_ingredients jsonb
+)
+RETURNS uuid
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_recipe_id uuid;
+  v_ri jsonb;
+BEGIN
+  INSERT INTO recipes (name, yield)
+  VALUES (p_name, p_yield)
+  RETURNING id INTO v_recipe_id;
+
+  FOR v_ri IN SELECT * FROM jsonb_array_elements(p_ingredients) LOOP
+    INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity)
+    VALUES (v_recipe_id, (v_ri->>'ingredientId')::uuid, (v_ri->>'quantity')::numeric);
+  END LOOP;
+
+  RETURN v_recipe_id;
+END;
+$$;
+
+-- RPC: create_product_v2
+CREATE OR REPLACE FUNCTION create_product_v2(
+  p_name text,
+  p_category text,
+  p_type text,
+  p_image_url text,
+  p_in_stock boolean,
+  p_availability text,
+  p_quantity numeric DEFAULT 0,
+  p_low_stock_threshold numeric DEFAULT 0,
+  p_variants jsonb DEFAULT '[]'::jsonb
+)
+RETURNS uuid
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_product_id uuid;
+  v_v jsonb;
+BEGIN
+  INSERT INTO products (
+    name, category, type, image_url, in_stock, 
+    availability, quantity, low_stock_threshold
+  )
+  VALUES (
+    p_name, p_category, p_type, p_image_url, COALESCE(p_in_stock, true),
+    COALESCE(p_availability, 'all-day'), COALESCE(p_quantity, 0), COALESCE(p_low_stock_threshold, 0)
+  )
+  RETURNING id INTO v_product_id;
+
+  IF p_variants IS NOT NULL AND jsonb_array_length(p_variants) > 0 THEN
+    FOR v_v IN SELECT * FROM jsonb_array_elements(p_variants) LOOP
+      INSERT INTO product_variants (product_id, size, price, recipe_id)
+      VALUES (
+        v_product_id, 
+        COALESCE(v_v->>'size', 'Regular'), 
+        (v_v->>'price')::numeric, 
+        CASE 
+          WHEN v_v->>'recipeId' IS NOT NULL AND v_v->>'recipeId' <> '' 
+          THEN (v_v->>'recipeId')::uuid 
+          ELSE NULL 
+        END
+      );
+    END LOOP;
+  END IF;
+
+  RETURN v_product_id;
+END;
+$$;

@@ -126,17 +126,18 @@ export default function ManageMenuPage() {
   // --- STANDARD HANDLERS ---
   const handleAddProduct = async (productData: any) => {
     await addProduct(productData)
-    toast.success("Product added successfully")
   }
   const handleEditProduct = async (updatedProduct: any) => {
     await updateProduct(updatedProduct.id, {
-      name: updatedProduct.name,
-      category: updatedProduct.category,
-      variants: [{ id: generateId(), size: 'Regular', price: updatedProduct.price, recipeId: null }],
-      image: updatedProduct.image
+      ...updatedProduct,
+      variants: [{ 
+        id: generateId(), 
+        size: 'Regular', 
+        price: updatedProduct.price, 
+        recipeId: updatedProduct.recipeId 
+      }]
     })
     setSelectedProductIds([]);
-    toast.success(`${updatedProduct.name} updated!`)
   }
   const handleDeleteProduct = async (id: string) => {
     await deleteProduct(id)
@@ -187,54 +188,54 @@ export default function ManageMenuPage() {
                         (activeTab === "categories" && selectedCategoryNames.length > 0);
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-background relative">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#EDE5DA] relative">
       
-      <SiteHeader>
-        {/* --- LEFT SIDE: Breadcrumbs --- */}
-        <div className="flex items-center gap-2">
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink asChild><Link to="/">POS</Link></BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage className="text-base font-semibold
-                
-                text-foreground">Menu Management</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
+      <div className="bg-[#E8DFD3] border-b border-[#D4C9BB]">
+        <SiteHeader>
+          {/* --- LEFT SIDE: Breadcrumbs --- */}
+          <div className="flex items-center gap-2">
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild><Link to="/" className="text-[#6B5B4E]">POS</Link></BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="text-[#D4C9BB]" />
+                <BreadcrumbItem>
+                  <BreadcrumbPage className="text-base font-bold text-[#1C1412]">Menu Management</BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          </div>
 
-        {/* --- RIGHT SIDE: Search Bar --- */}
-        <div className={`flex items-center ${isMobileSearchOpen ? "w-full md:w-auto" : "ml-auto"}`}>
-          {!isMobileSearchOpen && (
-            <Button variant="ghost" size="icon" className="md:hidden h-8 w-8 cursor-pointer" onClick={() => setIsMobileSearchOpen(true)}>
-              <Search className="h-4 w-4 text-muted-foreground" />
-            </Button>
-          )}
-
-          <div className={`${isMobileSearchOpen ? "flex fixed inset-x-0 top-0 z-50 bg-background h-16 items-center px-4" : "hidden md:flex"} items-center gap-2`}>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
-              <Input 
-                type="search" 
-                placeholder="Search items..." 
-                className="h-9 bg-muted w-full md:w-[200px] lg:w-[250px] pl-9 rounded-full border-border/50" 
-                value={searchQuery} 
-                onChange={(e) => setSearchQuery(e.target.value)} 
-                autoFocus={isMobileSearchOpen}
-              />
-            </div>
-            {isMobileSearchOpen && (
-              <Button variant="ghost" size="icon" className="md:hidden shrink-0 cursor-pointer" onClick={() => { setIsMobileSearchOpen(false); setSearchQuery(""); }}>
-                <X className="h-5 w-5 text-muted-foreground" />
+          {/* --- RIGHT SIDE: Search Bar --- */}
+          <div className={`flex items-center ${isMobileSearchOpen ? "w-full md:w-auto" : "ml-auto"}`}>
+            {!isMobileSearchOpen && (
+              <Button variant="ghost" size="icon" className="md:hidden h-8 w-8 cursor-pointer" onClick={() => setIsMobileSearchOpen(true)}>
+                <Search className="h-4 w-4 text-muted-foreground" />
               </Button>
             )}
+
+            <div className={`${isMobileSearchOpen ? "flex fixed inset-x-0 top-0 z-50 bg-background h-16 items-center px-4" : "hidden md:flex"} items-center gap-2`}>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-3.5 h-4 w-4 text-[#9E8E7E] pointer-events-none" />
+                <Input 
+                  type="search" 
+                  placeholder="Search items..." 
+                  className="h-11 bg-[#DDD5C8] w-full md:w-[200px] lg:w-[250px] pl-9 rounded-full border-[#C4B5A5] text-[#2C1F17] placeholder:text-[#9E8E7E] focus-visible:ring-1 focus-visible:ring-[#C4B5A5] touch-manipulation" 
+                  value={searchQuery} 
+                  onChange={(e) => setSearchQuery(e.target.value)} 
+                  autoFocus={isMobileSearchOpen}
+                />
+              </div>
+              {isMobileSearchOpen && (
+                <Button variant="ghost" size="icon" className="md:hidden shrink-0 cursor-pointer" onClick={() => { setIsMobileSearchOpen(false); setSearchQuery(""); }}>
+                  <X className="h-5 w-5 text-muted-foreground" />
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
-      </SiteHeader>
+        </SiteHeader>
+      </div>
 
       <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-24"> 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-6xl mx-auto">
@@ -251,7 +252,7 @@ export default function ManageMenuPage() {
               <div className="flex justify-center px-1 sm:px-0">
                 <Button 
                   onClick={() => setIsAddProductOpen(true)} 
-                  className="w-[95%] sm:w-[70%] max-w-[220px] rounded-full bg-foreground text-background hover:bg-foreground/80 shadow-md font-semibold whitespace-nowrap cursor-pointer"
+                  className="w-[95%] sm:w-[70%] max-w-[220px] h-11 rounded-full bg-foreground text-background hover:bg-foreground/80 shadow-md font-semibold active:scale-95 touch-manipulation"
                 >
                   <Plus className="mr-1 sm:mr-2 h-4 w-4 shrink-0" /> Add Product
                 </Button>
@@ -276,7 +277,7 @@ export default function ManageMenuPage() {
                     <TableHead>Product Name</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead className="text-right">Price Range</TableHead>
-                    <TableHead className="text-right w-[120px] hidden md:table-cell">Actions</TableHead>
+                    <TableHead className="text-right w-[140px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -289,7 +290,7 @@ export default function ManageMenuPage() {
                     return (
                       <TableRow 
                         key={product.id} 
-                        className={`transition-colors cursor-pointer md:cursor-default ${selectedProductIds.includes(product.id) ? "bg-muted/30" : ""}`}
+                        className={`group transition-colors cursor-pointer md:cursor-default ${selectedProductIds.includes(product.id) ? "bg-muted/30" : ""}`}
                         
                         onTouchStart={() => {
                           if (selectedProductIds.length === 0) {
@@ -317,17 +318,37 @@ export default function ManageMenuPage() {
                           />
                         </TableCell>
                         <TableCell>
-                          <div className="h-10 w-10 rounded-md overflow-hidden bg-muted">
-                            <img src={product.image || ""} alt={product.name} className="h-full w-full object-cover pointer-events-none" />
+                          <div className="h-12 w-12 rounded-lg overflow-hidden bg-muted/30 border border-border/50 relative">
+                            <img 
+                              src={product.image || ""} 
+                              alt={product.name} 
+                              loading="lazy"
+                              decoding="async"
+                              className="h-full w-full object-cover pointer-events-none" 
+                            />
                           </div>
                         </TableCell>
                         <TableCell className="font-medium">{product.name}</TableCell>
                         <TableCell><span className="bg-secondary text-secondary-foreground px-2 py-1 rounded-md text-xs font-medium">{product.category}</span></TableCell>
                         <TableCell className="text-right font-medium">{priceDisplay}</TableCell>
-                        <TableCell className="text-right hidden md:table-cell">
+                        <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon" className="cursor-pointer" onClick={(e) => { e.stopPropagation(); setSelectedProduct(product); setIsEditProductOpen(true); }}><Edit className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon" className="hover:text-destructive hover:bg-destructive/10 cursor-pointer" onClick={(e) => { e.stopPropagation(); setSelectedProduct(product); setIsDeleteProductOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-11 w-11 cursor-pointer active:scale-95 touch-manipulation" 
+                              onClick={(e) => { e.stopPropagation(); setSelectedProduct(product); setIsEditProductOpen(true); }}
+                            >
+                              <Edit className="h-5 w-5" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-11 w-11 hover:text-destructive hover:bg-destructive/10 cursor-pointer active:scale-95 touch-manipulation" 
+                              onClick={(e) => { e.stopPropagation(); setSelectedProduct(product); setIsDeleteProductOpen(true); }}
+                            >
+                              <Trash2 className="h-5 w-5" />
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -346,7 +367,7 @@ export default function ManageMenuPage() {
               <div className="flex justify-center px-1 sm:px-0">
                 <Button 
                   onClick={() => setIsAddCategoryOpen(true)} 
-                  className="w-[95%] sm:w-[70%] max-w-[220px] rounded-full bg-foreground text-background hover:bg-foreground/80 shadow-md font-semibold whitespace-nowrap cursor-pointer"
+                  className="w-[95%] sm:w-[70%] max-w-[220px] h-11 rounded-full bg-foreground text-background hover:bg-foreground/80 shadow-md font-semibold active:scale-95 touch-manipulation"
                 >
                   <Plus className="mr-1 sm:mr-2 h-4 w-4 shrink-0" /> Add Category
                 </Button>
@@ -368,7 +389,7 @@ export default function ManageMenuPage() {
                     </TableHead>
                     <TableHead>Category Name</TableHead>
                     <TableHead className="text-right">Total Items</TableHead>
-                    <TableHead className="text-right w-[120px] hidden md:table-cell">Actions</TableHead>
+                    <TableHead className="text-right w-[120px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -377,7 +398,7 @@ export default function ManageMenuPage() {
                     return (
                       <TableRow 
                         key={category} 
-                        className={`transition-colors cursor-pointer md:cursor-default ${selectedCategoryNames.includes(category) ? "bg-muted/30" : ""}`}
+                        className={`group transition-colors cursor-pointer md:cursor-default ${selectedCategoryNames.includes(category) ? "bg-muted/30" : ""}`}
                         
                         onTouchStart={() => {
                           if (selectedCategoryNames.length === 0) {
@@ -406,10 +427,10 @@ export default function ManageMenuPage() {
                         </TableCell>
                         <TableCell className="font-medium">{category}</TableCell>
                         <TableCell className="text-right text-muted-foreground">{itemCount} items</TableCell>
-                        <TableCell className="text-right hidden md:table-cell">
+                        <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon" className="cursor-pointer" onClick={(e) => { e.stopPropagation(); setSelectedCategory(category); setNewCategoryName(category); setIsEditCategoryOpen(true); }}><Edit className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon" className="hover:text-destructive hover:bg-destructive/10 cursor-pointer" onClick={(e) => { e.stopPropagation(); setSelectedCategory(category); setIsDeleteCategoryOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" className="h-11 w-11 cursor-pointer active:scale-95 touch-manipulation" onClick={(e) => { e.stopPropagation(); setSelectedCategory(category); setNewCategoryName(category); setIsEditCategoryOpen(true); }}><Edit className="h-5 w-5" /></Button>
+                            <Button variant="ghost" size="icon" className="h-11 w-11 hover:text-destructive hover:bg-destructive/10 cursor-pointer active:scale-95 touch-manipulation" onClick={(e) => { e.stopPropagation(); setSelectedCategory(category); setIsDeleteCategoryOpen(true); }}><Trash2 className="h-5 w-5" /></Button>
                           </div>
                         </TableCell>
                       </TableRow>

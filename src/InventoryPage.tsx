@@ -2,9 +2,8 @@ import { useState } from "react";
 import { InventorySystem } from "@/components/inventory-system";
 import { SiteHeader } from "@/components/site-header";
 import { useInventory } from "./context/InventoryContext";
-import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -33,8 +32,6 @@ export default function InventoryPage() {
       </div>
     )
   }
-
-  const today = format(new Date(), "EEEE, MMMM d, yyyy");
 
   const handleAddSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

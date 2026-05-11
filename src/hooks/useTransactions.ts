@@ -87,7 +87,7 @@ export function useTransactions() {
       }));
 
       // Call the atomic stored procedure
-      const { data: orderId, error: rpcError } = await supabase.rpc('create_complete_order', {
+      const { data: _orderId, error: rpcError } = await supabase.rpc('create_complete_order', {
         p_staff_id: user?.id,
         p_total: total,
         p_items: rpcItems

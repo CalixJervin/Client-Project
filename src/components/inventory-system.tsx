@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { useInventory } from "@/hooks/useInventory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card } from "@/components/ui/card";
 import { 
   BarChart3,
   BookOpen,

@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input"
 import { Plus, Search, X, ShoppingBag, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button" 
 import type { Product } from "@/hooks/useCart"
-import { toast } from "sonner"
 import { SiteHeader } from "@/components/site-header"
 
 import { useInventory } from "@/hooks/useInventory"

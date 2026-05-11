@@ -21,7 +21,6 @@ import { CSS } from "@dnd-kit/utilities"
 import {
   flexRender,
   getCoreRowModel,
-  getFacetedRowModel,
   getFacetedUniqueValues,
   getFilteredRowModel,
   getPaginationRowModel,

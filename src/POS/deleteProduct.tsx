@@ -1,4 +1,3 @@
-import { toast } from "sonner";
 import type { Product } from "@/hooks/useCart";
 import {
   Dialog,

@@ -5,9 +5,7 @@ import { Input } from "@/components/ui/input";
 import { DialogFooter } from "@/components/ui/dialog";
 import { Trash2, Plus, ShieldAlert, Coffee, KeyRound, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import bcrypt from "bcryptjs";
 import { useAuth, type Staff } from "@/hooks/use-auth";
-import { supabase } from "@/lib/supabase";
 
 export function AccountModal({ isOpen, onOpenChange }: { isOpen: boolean, onOpenChange: (o: boolean) => void }) {
   const { staffList, user, addStaff, deleteStaff, updateStaff } = useAuth();

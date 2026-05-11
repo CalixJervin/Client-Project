@@ -1,19 +1,18 @@
 import * as React from "react"
 
-import { NavDocuments } from "@/components/nav-documents"
-import { NavMain } from "@/components/nav-main"
-import { NavSecondary } from "@/components/nav-secondary"
-
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { LayoutDashboardIcon, ListIcon, CameraIcon, FileTextIcon, Settings2Icon, CircleHelpIcon, SearchIcon, DatabaseIcon, FileChartColumnIcon, FileIcon, CommandIcon } from "lucide-react"
+import { LayoutDashboardIcon, ListIcon, Settings2Icon, CircleHelpIcon, SearchIcon, DatabaseIcon, FileChartColumnIcon, FileIcon, CommandIcon } from "lucide-react"
 
 
 interface NavUserProps {

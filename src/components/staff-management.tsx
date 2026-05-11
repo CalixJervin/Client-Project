@@ -23,7 +23,7 @@ import {
   DialogTrigger 
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Trash2, UserPlus, ShieldAlert, Coffee, Edit2, Check } from "lucide-react"
+import { Trash2, UserPlus, ShieldAlert, Coffee, Edit2 } from "lucide-react"
 import { toast } from "sonner"
 
 export function StaffManagement() {

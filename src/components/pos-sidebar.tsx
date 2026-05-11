@@ -5,8 +5,6 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -22,11 +20,6 @@ import {
   LayoutDashboard, 
   ShoppingCart, 
   Package, 
-  FileChartColumn, 
-  Database, 
-  FileText, 
-  CircleHelp, 
-  Search,
   CommandIcon
 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"

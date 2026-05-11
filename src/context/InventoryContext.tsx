@@ -60,7 +60,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         storage.getSales()
       ]);
 
-      // Calculate availability for made-to-order products based on current ingredient stocks
+      // Calculate availability for products based on current stocks
       const updatedProducts = prods.map(product => {
         if (product.type === 'made-to-order') {
           // A made-to-order product is in stock if AT LEAST one variant has all its ingredients
@@ -80,6 +80,12 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
           return {
             ...product,
             inStock: product.inStock && anyVariantAvailable
+          };
+        } else if (product.type === 'ready-made') {
+          // A ready-made product is in stock if its quantity > 0
+          return {
+            ...product,
+            inStock: product.inStock && (product.quantity || 0) > 0
           };
         }
         return product;

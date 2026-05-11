@@ -249,12 +249,12 @@ export function InventoryTable({
                 </div>
               </div>
             )}
-            <DialogFooter className="mt-4 flex-row gap-2 sm:gap-0">
+            <DialogFooter className="mt-4 flex flex-row gap-2 sm:gap-0">
               <Button type="button" variant="outline" className="flex-1 sm:flex-none" onClick={() => {
                 setIsEditOpen(false);
                 setSelectedItem(null);
               }}>Cancel</Button>
-              <Button type="submit" className="flex-1 sm:flex-none bg-[#22c55e] hover:bg-[#16a34a] text-white">Save Changes</Button>
+              <Button type="submit" className="flex-1 sm:flex-none">Save Changes</Button>
             </DialogFooter>
           </form>
         </DialogContent>

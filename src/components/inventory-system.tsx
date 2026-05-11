@@ -82,7 +82,7 @@ export function InventorySystem({ externalSearchQuery = "", onAddClick }: Invent
         
         <Button 
           onClick={onAddClick}
-          className="bg-[#22c55e] hover:bg-[#16a34a] text-white gap-2 h-9 px-4 rounded-full shadow-sm font-bold text-sm transition-all hover:scale-105 active:scale-95"
+          className="bg-foreground text-background hover:bg-foreground/90 gap-2 h-9 px-4 rounded-full shadow-md font-semibold text-sm transition-all hover:scale-105 active:scale-95"
         >
           <Plus className="h-4 w-4" />
           Add Ingredient

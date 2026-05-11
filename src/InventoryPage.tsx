@@ -175,7 +175,7 @@ export default function InventoryPage() {
             </div>
             <DialogFooter className="mt-4 flex-row gap-2 sm:gap-0">
               <Button type="button" variant="outline" className="flex-1 sm:flex-none" onClick={() => setIsAddOpen(false)}>Cancel</Button>
-              <Button type="submit" className="flex-1 sm:flex-none bg-[#22c55e] hover:bg-[#16a34a] text-white font-bold">Save Ingredient</Button>
+              <Button type="submit" className="flex-1 sm:flex-none font-bold">Save Ingredient</Button>
             </DialogFooter>
           </form>
         </DialogContent>

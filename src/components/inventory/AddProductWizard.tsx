@@ -336,7 +336,7 @@ export function AddProductWizard({
               Continue <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           ) : (
-            <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700 min-w-[120px]" disabled={isSaving}>
+            <Button onClick={handleSave} className="min-w-[120px]" disabled={isSaving}>
               {isSaving ? "Saving..." : <><Check className="h-4 w-4 mr-1" /> Save Product</>}
             </Button>
           )}

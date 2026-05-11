@@ -152,6 +152,7 @@ CREATE OR REPLACE FUNCTION deduct_stock_on_sale(p_order_items jsonb)
 RETURNS TABLE (ingredient_id uuid, ingredient_name text, current_stock numeric, threshold numeric)
 LANGUAGE plpgsql
 AS $$
+#variable_conflict use_column
 DECLARE
   v_item jsonb;
   v_product_id uuid;
@@ -159,37 +160,55 @@ DECLARE
   v_quantity numeric;
   v_recipe_id uuid;
   v_product_type text;
+  v_product_name text;
   v_ri RECORD;
-  v_all_ings_available boolean;
+  v_available_qty numeric;
 BEGIN
   FOR v_item IN SELECT * FROM jsonb_array_elements(p_order_items) LOOP
     v_product_id := (v_item->>'product_id')::uuid;
     v_variant_id := (v_item->>'variant_id')::uuid;
     v_quantity := (v_item->>'quantity')::numeric;
 
-    -- Get product type
-    SELECT type INTO v_product_type FROM products WHERE id = v_product_id;
+    -- Get product info
+    SELECT name, type, quantity INTO v_product_name, v_product_type, v_available_qty 
+    FROM products WHERE id = v_product_id;
 
     IF v_product_type = 'ready-made' THEN
+      -- Check if enough ready-made quantity exists
+      IF v_available_qty < v_quantity THEN
+        RAISE EXCEPTION 'Insufficient stock for %: only % left, but % requested', v_product_name, v_available_qty, v_quantity;
+      END IF;
+
       -- Deduct product quantity
       UPDATE products 
-      SET quantity = GREATEST(0, quantity - v_quantity)
+      SET quantity = products.quantity - v_quantity
       WHERE id = v_product_id;
       
-      -- Note: Trigger trg_update_product_in_stock will flip in_stock if quantity hit 0
     ELSIF v_product_type = 'made-to-order' THEN
       -- Get recipe id from variant
       SELECT recipe_id INTO v_recipe_id FROM product_variants WHERE id = v_variant_id;
       
       IF v_recipe_id IS NOT NULL THEN
-        -- Deduct each ingredient
+        -- Check ALL ingredients in recipe first before deducting any
+        FOR v_ri IN SELECT ri.ingredient_id, i.name as ing_name, i.current_stock as ing_stock, ri.quantity as recipe_qty, r.yield 
+                    FROM recipe_ingredients ri 
+                    JOIN recipes r ON ri.recipe_id = r.id
+                    JOIN ingredients i ON ri.ingredient_id = i.id
+                    WHERE ri.recipe_id = v_recipe_id LOOP
+          
+          IF v_ri.ing_stock < (v_ri.recipe_qty / v_ri.yield) * v_quantity THEN
+            RAISE EXCEPTION 'Insufficient ingredient stock for %: % only has % left', v_product_name, v_ri.ing_name, v_ri.ing_stock;
+          END IF;
+        END LOOP;
+
+        -- If check passed, deduct each ingredient
         FOR v_ri IN SELECT ri.ingredient_id, ri.quantity as recipe_qty, r.yield 
                     FROM recipe_ingredients ri 
                     JOIN recipes r ON ri.recipe_id = r.id
                     WHERE ri.recipe_id = v_recipe_id LOOP
           UPDATE ingredients
-          SET current_stock = GREATEST(0, current_stock - (v_ri.recipe_qty / v_ri.yield) * v_quantity)
-          WHERE id = v_ri.ingredient_id;
+          SET current_stock = ingredients.current_stock - (v_ri.recipe_qty / v_ri.yield) * v_quantity
+          WHERE ingredients.id = v_ri.ingredient_id;
         END LOOP;
       END IF;
     END IF;
@@ -197,12 +216,12 @@ BEGIN
 
   -- Return ingredients OR ready-made products below threshold
   RETURN QUERY
-  SELECT i.id, i.name, i.current_stock, i.low_stock_threshold
-  FROM ingredients i
-  WHERE i.current_stock <= i.low_stock_threshold
+  SELECT ingredients.id, ingredients.name, ingredients.current_stock, ingredients.low_stock_threshold
+  FROM ingredients
+  WHERE ingredients.current_stock <= ingredients.low_stock_threshold
   UNION ALL
-  SELECT p.id, p.name, p.quantity, p.low_stock_threshold
-  FROM products p
-  WHERE p.type = 'ready-made' AND p.quantity <= p.low_stock_threshold;
+  SELECT products.id, products.name, products.quantity, products.low_stock_threshold
+  FROM products
+  WHERE products.type = 'ready-made' AND products.quantity <= products.low_stock_threshold;
 END;
 $$;

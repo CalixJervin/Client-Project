@@ -1,5 +1,5 @@
 // hooks/useCart.ts
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 
 export interface Product {
   id: string;
@@ -19,7 +19,7 @@ export interface CartItem extends Product {
 export function useCart() {
   const [cart, setCart] = useState<CartItem[]>([]);
 
-  const addToCart = (product: Product) => {
+  const addToCart = useCallback((product: Product) => {
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.id === product.id);
       if (existingItem) {
@@ -29,24 +29,24 @@ export function useCart() {
       }
       return [...prevCart, { ...product, qty: 1 }];
     });
-  };
+  }, []);
 
-  const updateQty = (id: string, delta: number) => {
+  const updateQty = useCallback((id: string, delta: number) => {
     setCart((prevCart) =>
       prevCart.map((item) =>
         item.id === id ? { ...item, qty: item.qty + delta } : item
       )
       .filter((item) => item.qty > 0)
     );
-  };
+  }, []);
 
-  const removeFromCart = (id: string) => {
+  const removeFromCart = useCallback((id: string) => {
     setCart((prevCart) => prevCart.filter((item) => item.id !== id));
-  };
+  }, []);
 
-  const clearCart = () => setCart([]);
+  const clearCart = useCallback(() => setCart([]), []);
 
-  const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const subtotal = useMemo(() => cart.reduce((sum, item) => sum + item.price * item.qty, 0), [cart]);
   const total = subtotal;
 
   // Return exactly what the UI needs to function

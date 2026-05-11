@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { TicketSidebar } from "@/POS/Ticket"
 import { useCart } from "@/hooks/useCart"
 import { AddProductModal } from "@/POS/addProduct" 
@@ -57,7 +57,7 @@ export default function Page() {
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false)
 
   // Map inventory products to POS structure
-  const products: Product[] = inventoryProducts.map(p => ({
+  const products: Product[] = useMemo(() => inventoryProducts.map(p => ({
     id: p.id,
     name: p.name,
     price: p.variants[0]?.price || 0,
@@ -66,28 +66,28 @@ export default function Page() {
     inStock: p.inStock,
     variantId: p.variants[0]?.id as any, // ID from product_variants table
     size: p.variants[0]?.size || "Regular"
-  }))
+  })), [inventoryProducts])
 
-  const handleProductAdded = async (productData: any) => {
+  const handleProductAdded = useCallback(async (productData: any) => {
     await addProduct(productData)
-  }
+  }, [addProduct])
 
-  const handleStageForDeletion = (id: string, _name: string) => {
+  const handleStageForDeletion = useCallback((id: string, _name: string) => {
     const product = products.find(p => p.id === id) || null;
     setProductToDelete(product);
     setIsDeleteModalOpen(true);
-  };
+  }, [products]);
 
-  const handleConfirmDelete = async (id: string) => {
+  const handleConfirmDelete = useCallback(async (id: string) => {
     try {
       await deleteProduct(id);
       setProductToDelete(null);
     } catch (error) {
       console.error("Failed to delete product:", error);
     }
-  };
+  }, [deleteProduct]);
 
-  const handleAddCategory = (newCategoryName: string, selectedProductIds: string[]) => {
+  const handleAddCategory = useCallback((newCategoryName: string, selectedProductIds: string[]) => {
     addCategory(newCategoryName)
 
     if (selectedProductIds.length > 0) {
@@ -95,29 +95,30 @@ export default function Page() {
         updateProduct(id, { category: newCategoryName as any });
       });
     }
-  }
+  }, [addCategory, updateProduct])
 
-  const allCategories = ["All", ...categories];
+  const allCategories = useMemo(() => ["All", ...categories], [categories]);
 
-  const filteredProducts = products.filter((product) => {
+  const filteredProducts = useMemo(() => products.filter((product) => {
     const matchesCategory = activeCategory === "All" || product.category === activeCategory;
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
     
     return matchesCategory && matchesSearch;
-  });
+  }), [products, activeCategory, searchQuery]);
 
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
 
-  const totalCartItems = cart.reduce((total, item) => total + item.qty, 0);
+  const totalCartItems = useMemo(() => cart.reduce((total, item) => total + item.qty, 0), [cart]);
 
-  const handleAddToCart = (product: Product) => {
+  const handleAddToCart = useCallback((product: Product) => {
     addToCart(product);
     setSelectedProductId(product.id);
     
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       setSelectedProductId(null);
     }, 150); 
-  };
+    return () => clearTimeout(timer);
+  }, [addToCart]);
     
   return (
     // 1. The main container is now a ROW first

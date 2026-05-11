@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Plus, Search, X, ShoppingBag, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button" 
 import type { Product } from "@/hooks/useCart"
-import { Toaster, toast } from "sonner"
+import { toast } from "sonner"
 import { SiteHeader } from "@/components/site-header"
 
 import { useInventory } from "@/hooks/useInventory"
@@ -130,7 +130,7 @@ export default function Page() {
         <div className="bg-[#E8DFD3] border-b border-[#D4C9BB]">
           <SiteHeader>
             <div className={`flex items-center gap-2 ${isMobileSearchOpen ? "hidden md:flex" : "flex"}`}>
-              <h1 className="text-base font-bold text-[#1C1412] hidden lg:block">POS</h1>
+              <h1 className="text-sm font-bold text-[#1C1412] hidden lg:block">POS</h1>
               
               <Button 
                 variant="secondary"
@@ -273,8 +273,6 @@ export default function Page() {
       <AddProductModal isOpen={isAddModalOpen} onOpenChange={setIsAddModalOpen} onAddProduct={handleProductAdded} categories={categories} />
       <DeleteProductModal isOpen={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen} onDeleteProduct={handleConfirmDelete} product={productToDelete} />
       <AddCategoryModal isOpen={isAddCategoryOpen} onOpenChange={setIsAddCategoryOpen} onAddCategory={handleAddCategory} existingProducts={products} existingCategories={categories} />
-
-      <Toaster richColors/>
     </div>
   )
 }

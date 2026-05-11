@@ -17,7 +17,8 @@ export default function LoginPage() {
     isInitialSetup, 
     login, 
     unlock, 
-    addStaff 
+    addStaff,
+    logout 
   } = useAuth()
   
   const [view, setView] = useState<"onboarding" | "select" | "pin">("select")
@@ -254,8 +255,8 @@ export default function LoginPage() {
             {view === "pin" && selectedStaff && (
               <motion.div key="pin-pad" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="flex flex-col items-center flex-1 max-w-sm mx-auto w-full">
                 <div className="w-full flex items-center justify-between mb-8">
-                  <Button variant="ghost" size="icon" className="rounded-full" onClick={() => { if (!isLocked) setView("select"); setPin(""); }}>
-                    {!isLocked && <ArrowLeft className="h-5 w-5" />}
+                  <Button variant="ghost" size="icon" className="rounded-full" onClick={() => { logout(); setView("select"); setPin(""); }}>
+                    <ArrowLeft className="h-5 w-5" />
                   </Button>
                   <div className="text-center">
                     <span className="font-semibold text-xl">Hi, {selectedStaff.name} 👋</span>

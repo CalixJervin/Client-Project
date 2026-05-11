@@ -18,7 +18,9 @@ export const storage = {
       name: s.name,
       role: s.role,
       avatarColor: s.avatar_color,
-      avatarInitials: s.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
+      avatarInitials: s.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2),
+      canManageMenu: s.can_manage_menu,
+      canManageInventory: s.can_manage_inventory
     }));
   },
 

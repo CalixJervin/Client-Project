@@ -1,5 +1,5 @@
 // components/ProductGrid.tsx
-import { Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import type { Product } from "@/hooks/useCart";
 
 interface ProductGridProps {
@@ -45,19 +45,6 @@ export function ProductGrid({
                 </span>
               </div>
             )}
-
-            {/* Delete Button */}
-            {product.inStock !== false && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteProduct(product.id, product.name);
-                }}
-                className="absolute top-2 right-2 z-10 p-2 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all bg-black/20 hover:bg-[#C0392B] active:scale-95 flex items-center justify-center touch-manipulation"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            )}
           </div>
 
           <div className="p-3 flex flex-col gap-1">
@@ -73,10 +60,10 @@ export function ProductGrid({
       {/* Add New Item Button */}
       <button 
         onClick={onAddNewClick}
-        className="aspect-square rounded-[12px] border-2 border-dashed border-[#C4B5A5] flex flex-col items-center justify-center gap-2 text-[#6B5B4E] hover:border-[#1C1412] hover:text-[#1C1412] hover:bg-white/20 active:scale-[0.98] transition-all cursor-pointer touch-manipulation"
+        className="flex flex-col items-center justify-center gap-2 rounded-[12px] border-2 border-dashed border-[#C4B5A5] bg-white/20 text-[#6B5B4E] hover:border-[#1C1412] hover:text-[#1C1412] hover:bg-[#1C1412]/5 transition-all duration-150 active:scale-[0.98] touch-manipulation h-full min-h-[180px] w-full"
       >
-        <Plus className="h-8 w-8" />
-        <span className="text-sm font-medium">Add Product</span>
+        <Plus className="h-10 w-10" />
+        <span className="text-sm font-bold">Add Product</span>
       </button>
     </div>
   );

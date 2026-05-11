@@ -67,61 +67,63 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenuItem>
 
             {user?.role === "admin" && (
-              <>
-                <SidebarMenuItem>
-                  <SidebarMenuButton 
-                    asChild 
-                    isActive={location.pathname === "/dashboard"}
-                    tooltip="Dashboard"
-                    className={`text-[13px] font-medium transition-all ${
-                      location.pathname === "/dashboard" 
-                        ? "bg-white/8 text-white border-l-[3px] border-[#D4A574] rounded-none!" 
-                        : "text-[#A89080] hover:text-white hover:bg-white/5"
-                    }`}
-                  >
-                    <Link to="/dashboard" onClick={() => setOpenMobile(false)}>
-                      <LayoutDashboard className={`size-4 ${location.pathname === "/dashboard" ? "text-white" : "text-[#A89080]"}`} />
-                      <span>Dashboard</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                
-                <SidebarMenuItem>
-                  <SidebarMenuButton 
-                    asChild 
-                    isActive={location.pathname === "/inventory"}
-                    tooltip="Inventory"
-                    className={`text-[13px] font-medium transition-all ${
-                      location.pathname === "/inventory" 
-                        ? "bg-white/8 text-white border-l-[3px] border-[#D4A574] rounded-none!" 
-                        : "text-[#A89080] hover:text-white hover:bg-white/5"
-                    }`}
-                  >
-                    <Link to="/inventory" onClick={() => setOpenMobile(false)}>
-                      <Package className={`size-4 ${location.pathname === "/inventory" ? "text-white" : "text-[#A89080]"}`} />
-                      <span>Inventory</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  isActive={location.pathname === "/dashboard"}
+                  tooltip="Dashboard"
+                  className={`text-[13px] font-medium transition-all ${
+                    location.pathname === "/dashboard" 
+                      ? "bg-white/8 text-white border-l-[3px] border-[#D4A574] rounded-none!" 
+                      : "text-[#A89080] hover:text-white hover:bg-white/5"
+                  }`}
+                >
+                  <Link to="/dashboard" onClick={() => setOpenMobile(false)}>
+                    <LayoutDashboard className={`size-4 ${location.pathname === "/dashboard" ? "text-white" : "text-[#A89080]"}`} />
+                    <span>Dashboard</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
 
-                <SidebarMenuItem>
-                  <SidebarMenuButton 
-                    asChild 
-                    isActive={location.pathname === "/menuManagement"}
-                    tooltip="Edit Menu"
-                    className={`text-[13px] font-medium transition-all ${
-                      location.pathname === "/menuManagement" 
-                        ? "bg-white/8 text-white border-l-[3px] border-[#D4A574] rounded-none!" 
-                        : "text-[#A89080] hover:text-white hover:bg-white/5"
-                    }`}
-                  >
-                    <Link to="/menuManagement" onClick={() => setOpenMobile(false)}>
-                      <Settings className={`size-4 ${location.pathname === "/menuManagement" ? "text-white" : "text-[#A89080]"}`} />
-                      <span>Edit Menu</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </>
+            {(user?.role === "admin" || user?.canManageInventory) && (
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  isActive={location.pathname === "/inventory"}
+                  tooltip="Inventory"
+                  className={`text-[13px] font-medium transition-all ${
+                    location.pathname === "/inventory" 
+                      ? "bg-white/8 text-white border-l-[3px] border-[#D4A574] rounded-none!" 
+                      : "text-[#A89080] hover:text-white hover:bg-white/5"
+                  }`}
+                >
+                  <Link to="/inventory" onClick={() => setOpenMobile(false)}>
+                    <Package className={`size-4 ${location.pathname === "/inventory" ? "text-white" : "text-[#A89080]"}`} />
+                    <span>Inventory</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
+
+            {(user?.role === "admin" || user?.canManageMenu) && (
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  isActive={location.pathname === "/menuManagement"}
+                  tooltip="Edit Menu"
+                  className={`text-[13px] font-medium transition-all ${
+                    location.pathname === "/menuManagement" 
+                      ? "bg-white/8 text-white border-l-[3px] border-[#D4A574] rounded-none!" 
+                      : "text-[#A89080] hover:text-white hover:bg-white/5"
+                  }`}
+                >
+                  <Link to="/menuManagement" onClick={() => setOpenMobile(false)}>
+                    <Settings className={`size-4 ${location.pathname === "/menuManagement" ? "text-white" : "text-[#A89080]"}`} />
+                    <span>Edit Menu</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             )}
           </SidebarMenu>
         </SidebarGroup>

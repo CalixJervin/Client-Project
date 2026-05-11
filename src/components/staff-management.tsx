@@ -23,7 +23,7 @@ import {
   DialogTrigger 
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Trash2, UserPlus, ShieldAlert, Coffee, Edit2 } from "lucide-react"
+import { Trash2, UserPlus, ShieldAlert, Coffee, Edit2, Check } from "lucide-react"
 import { toast } from "sonner"
 
 export function StaffManagement() {
@@ -39,11 +39,15 @@ export function StaffManagement() {
   const [newRole, setNewRole] = useState<Role>("cashier")
   const [newPin, setNewPin] = useState("")
   const [confirmPin, setConfirmPin] = useState("")
+  const [newCanManageMenu, setNewCanManageMenu] = useState(false)
+  const [newCanManageInventory, setNewCanManageInventory] = useState(false)
 
   const [editName, setEditName] = useState("")
   const [editRole, setEditRole] = useState<Role>("cashier")
   const [editPin, setEditPin] = useState("")
   const [editConfirmPin, setEditConfirmPin] = useState("")
+  const [editCanManageMenu, setEditCanManageMenu] = useState(false)
+  const [editCanManageInventory, setEditCanManageInventory] = useState(false)
 
   const handleAddAccount = async () => {
     if (!newName.trim()) return toast.error("Name is required")
@@ -53,7 +57,9 @@ export function StaffManagement() {
     const result = await addStaff({
       name: newName.trim(),
       role: newRole,
-      avatarColor: "bg-primary"
+      avatarColor: "bg-primary",
+      canManageMenu: newRole === "admin" ? true : newCanManageMenu,
+      canManageInventory: newRole === "admin" ? true : newCanManageInventory
     }, newPin)
 
     if (result.success) {
@@ -61,6 +67,8 @@ export function StaffManagement() {
       setNewName("")
       setNewPin("")
       setConfirmPin("")
+      setNewCanManageMenu(false)
+      setNewCanManageInventory(false)
       setIsAddDialogOpen(false)
     } else {
       toast.error(result.message)
@@ -71,6 +79,8 @@ export function StaffManagement() {
     setStaffToEdit(staff)
     setEditName(staff.name)
     setEditRole(staff.role)
+    setEditCanManageMenu(staff.canManageMenu || false)
+    setEditCanManageInventory(staff.canManageInventory || false)
     setEditPin("")
     setEditConfirmPin("")
     setIsEditDialogOpen(true)
@@ -88,6 +98,8 @@ export function StaffManagement() {
     const result = await updateStaff(staffToEdit.id, {
       name: editName.trim(),
       role: editRole,
+      canManageMenu: editRole === "admin" ? true : editCanManageMenu,
+      canManageInventory: editRole === "admin" ? true : editCanManageInventory
     }, editPin || undefined)
 
     if (result.success) {
@@ -157,6 +169,35 @@ export function StaffManagement() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {newRole === "cashier" && (
+                <div className="grid gap-3 p-4 bg-muted/50 rounded-lg border">
+                  <label className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Additional Permissions</label>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        id="new-manage-menu"
+                        checked={newCanManageMenu}
+                        onChange={(e) => setNewCanManageMenu(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <label htmlFor="new-manage-menu" className="text-sm font-medium cursor-pointer">Access Menu Management</label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        id="new-manage-inventory"
+                        checked={newCanManageInventory}
+                        onChange={(e) => setNewCanManageInventory(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <label htmlFor="new-manage-inventory" className="text-sm font-medium cursor-pointer">Access Inventory</label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="grid gap-2">
                 <label className="text-sm font-medium">PIN (4-6 digits)</label>
                 <Input 
@@ -191,6 +232,7 @@ export function StaffManagement() {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Role</TableHead>
+              <TableHead>Permissions</TableHead>
               <TableHead>Last Shift Start</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -210,6 +252,19 @@ export function StaffManagement() {
                   <div className="flex items-center gap-1">
                     {staff.role === 'admin' ? <ShieldAlert className="h-3 w-3" /> : <Coffee className="h-3 w-3" />}
                     {staff.role}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {staff.role === 'admin' ? (
+                      <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-[10px] font-bold uppercase">All Access</span>
+                    ) : (
+                      <>
+                        {staff.canManageMenu && <span className="bg-[#E8DFD3] text-[#6B5B4E] px-2 py-0.5 rounded text-[10px] font-bold uppercase">Menu</span>}
+                        {staff.canManageInventory && <span className="bg-[#E8DFD3] text-[#6B5B4E] px-2 py-0.5 rounded text-[10px] font-bold uppercase">Inventory</span>}
+                        {!staff.canManageMenu && !staff.canManageInventory && <span className="text-muted-foreground text-[10px] italic">POS Only</span>}
+                      </>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -269,6 +324,35 @@ export function StaffManagement() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {editRole === "cashier" && (
+                <div className="grid gap-3 p-4 bg-muted/50 rounded-lg border">
+                  <label className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Additional Permissions</label>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        id="edit-manage-menu"
+                        checked={editCanManageMenu}
+                        onChange={(e) => setEditCanManageMenu(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <label htmlFor="edit-manage-menu" className="text-sm font-medium cursor-pointer">Access Menu Management</label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        id="edit-manage-inventory"
+                        checked={editCanManageInventory}
+                        onChange={(e) => setEditCanManageInventory(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <label htmlFor="edit-manage-inventory" className="text-sm font-medium cursor-pointer">Access Inventory</label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="grid gap-2">
                 <label className="text-sm font-medium">New PIN (Leave blank to keep current)</label>
                 <Input 
@@ -317,4 +401,3 @@ export function StaffManagement() {
     </Card>
   )
 }
-

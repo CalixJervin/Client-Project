@@ -65,9 +65,9 @@ export default function InventoryPage() {
                     <Link to="/" className="text-[#6B5B4E]">POS</Link>
                   </BreadcrumbLink>
                 </BreadcrumbItem>
-                <BreadcrumbSeparator className="text-[#D4C9BB]" />
+                <BreadcrumbSeparator className="text-[#1C1412]" />
                 <BreadcrumbItem>
-                  <BreadcrumbPage className="text-base font-bold text-[#1C1412]">
+                  <BreadcrumbPage className="text-sm font-bold text-[#1C1412]">
                     Inventory Management
                   </BreadcrumbPage>
                 </BreadcrumbItem>

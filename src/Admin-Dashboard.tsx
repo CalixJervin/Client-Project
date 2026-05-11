@@ -3,6 +3,7 @@ import { SiteHeader } from "@/components/site-header"
 import { useTransactions } from "./hooks/useTransactions"
 import { useInventory } from "./context/InventoryContext"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useAuth } from "@/hooks/use-auth"
 
 const ChartAreaInteractive = lazy(() => import("@/components/chart-area-interactive").then(m => ({ default: m.ChartAreaInteractive })))
 const DataTable = lazy(() => import("@/components/data-table").then(m => ({ default: m.DataTable })))
@@ -12,6 +13,7 @@ const StaffManagement = lazy(() => import("@/components/staff-management").then(
 export default function Page() {
   const { isLoading: txLoading } = useTransactions()
   const { isLoading: invLoading } = useInventory()
+  const { user } = useAuth()
 
   if (txLoading || invLoading) {
     return (
@@ -25,7 +27,7 @@ export default function Page() {
     <div className="flex flex-1 flex-col overflow-auto bg-[#EDE5DA]">
       <div className="bg-[#E8DFD3] border-b border-[#D4C9BB]">
         <SiteHeader>
-          <h1 className="text-base font-bold text-[#1C1412]">Dashboard</h1>
+          <h1 className="text-sm font-bold text-[#1C1412]">Dashboard</h1>
         </SiteHeader>
       </div>
       <div className="flex flex-1 flex-col">
@@ -46,11 +48,13 @@ export default function Page() {
               <DataTable />
             </Suspense>
 
-            <div className="px-4 lg:px-6">
-              <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
-                <StaffManagement />
-              </Suspense>
-            </div>
+            {user?.role === "admin" && (
+              <div className="px-4 lg:px-6">
+                <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+                  <StaffManagement />
+                </Suspense>
+              </div>
+            )}
             
           </div>
         </div>

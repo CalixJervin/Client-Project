@@ -12,6 +12,8 @@ export interface Staff {
   avatarColor: string
   avatarInitials: string
   shiftStart?: string
+  canManageMenu?: boolean
+  canManageInventory?: boolean
 }
 
 interface AuthContextType {
@@ -193,7 +195,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         name: staffData.name,
         role: staffData.role,
         pin_hash,
-        avatar_color: staffData.avatarColor
+        avatar_color: staffData.avatarColor,
+        can_manage_menu: staffData.canManageMenu,
+        can_manage_inventory: staffData.canManageInventory
       }])
 
     if (error) {
@@ -225,6 +229,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.name) updateData.name = data.name
       if (data.role) updateData.role = data.role
       if (data.avatarColor) updateData.avatar_color = data.avatarColor
+      if (data.canManageMenu !== undefined) updateData.can_manage_menu = data.canManageMenu
+      if (data.canManageInventory !== undefined) updateData.can_manage_inventory = data.canManageInventory
 
       if (pin) {
         const salt = await bcrypt.genSalt(10)

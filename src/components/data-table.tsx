@@ -29,14 +29,13 @@ import {
   useReactTable,
   type ColumnDef,
   type ColumnFiltersState,
-  type Row,
-  type SortingState,
   type VisibilityState,
+  type SortingState,
+  type Row,
 } from "@tanstack/react-table"
 import { useTransactions } from "@/hooks/useTransactions"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -70,7 +69,7 @@ import {
   DialogFooter
 } from "@/components/ui/dialog"
 import { 
-  GripVerticalIcon, 
+  GripVerticalIcon,
   EllipsisVerticalIcon, 
   Columns3Icon, 
   ChevronDownIcon, 
@@ -83,6 +82,7 @@ import {
   CreditCard,
   History
 } from "lucide-react"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { format } from "date-fns"
 
 export interface TransactionRow {
@@ -142,6 +142,7 @@ function DraggableRow({ row }: { row: Row<TransactionRow> }) {
 
 export function DataTable() {
   const { transactions, transactionItems } = useTransactions()
+  const isMobile = useIsMobile()
   const [selectedTransactionId, setSelectedTransactionId] = React.useState<string | null>(null)
   
   const data = React.useMemo(() => {
@@ -177,38 +178,12 @@ export function DataTable() {
       cell: ({ row }) => <DragHandle id={row.original.id} />,
     },
     {
-      id: "select",
-      header: ({ table }) => (
-        <div className="flex items-center justify-center">
-          <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && "indeterminate")
-            }
-            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-            aria-label="Select all"
-          />
-        </div>
-      ),
-      cell: ({ row }) => (
-        <div className="flex items-center justify-center">
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select row"
-          />
-        </div>
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
-    {
       accessorKey: "order_id",
       header: "Order ID",
       cell: ({ row }) => (
         <span className="font-bold text-[#1C1412] text-sm">{row.original.order_id}</span>
       ),
-      enableHiding: false,
+      enableHiding: true,
     },
     {
       accessorKey: "timestamp",
@@ -241,9 +216,9 @@ export function DataTable() {
       accessorKey: "items_summary",
       header: "Items",
       cell: ({ row }) => (
-        <div className="flex flex-col py-1 max-w-[120px] sm:max-w-none">
+        <div className="flex flex-col py-1 max-w-[150px] sm:max-w-none">
           <span className="font-bold text-[#1C1412] text-sm">{row.original.items_count} items</span>
-          <span className="text-[11px] text-[#6B5B4E] truncate sm:whitespace-pre-wrap sm:overflow-visible">
+          <span className="text-[11px] text-[#6B5B4E] truncate">
             {row.original.items_summary}
           </span>
         </div>
@@ -282,9 +257,25 @@ export function DataTable() {
     },
   ], [])
 
-  const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({})
+    React.useState<VisibilityState>({
+      order_id: false,
+    })
+
+  React.useEffect(() => {
+    if (isMobile) {
+      setColumnVisibility((prev) => ({
+        ...prev,
+        payment_method: false,
+      }))
+    } else {
+      setColumnVisibility((prev) => ({
+        ...prev,
+        payment_method: true,
+      }))
+    }
+  }, [isMobile])
+
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   )
@@ -317,13 +308,10 @@ export function DataTable() {
     state: {
       sorting,
       columnVisibility,
-      rowSelection,
       columnFilters,
       pagination,
     },
     getRowId: (row) => row.id,
-    enableRowSelection: true,
-    onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
@@ -332,7 +320,7 @@ export function DataTable() {
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedRowModel: getCoreRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
   })
 
@@ -387,8 +375,8 @@ export function DataTable() {
         </div>
       </div>
 
-      <div className="px-4 lg:px-6 overflow-x-auto pb-4">
-        <div className="overflow-hidden rounded-xl border border-[#DDD5C8] bg-[#F5EFE6] shadow-[0_2px_8px_rgba(0,0,0,0.06)] min-w-[750px] md:min-w-0">
+      <div className="px-4 lg:px-6">
+        <div className="overflow-hidden rounded-xl border border-[#DDD5C8] bg-[#F5EFE6] shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
           <DndContext
             collisionDetection={closestCenter}
             modifiers={[restrictToVerticalAxis]}
@@ -440,11 +428,7 @@ export function DataTable() {
           </DndContext>
         </div>
 
-        <div className="mt-4 flex items-center justify-between px-2">
-          <div className="hidden flex-1 text-sm text-muted-foreground lg:flex">
-            {table.getFilteredSelectedRowModel().rows.length} of{" "}
-            {table.getFilteredRowModel().rows.length} row(s) selected.
-          </div>
+        <div className="mt-4 flex items-center justify-end px-2">
           <div className="flex w-full items-center gap-8 lg:w-fit">
             <div className="hidden items-center gap-2 lg:flex">
               <Label htmlFor="rows-per-page" className="text-sm font-medium">

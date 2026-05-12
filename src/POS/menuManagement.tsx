@@ -38,9 +38,6 @@ export default function ManageMenuPage() {
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([])
   const [selectedCategoryNames, setSelectedCategoryNames] = useState<string[]>([])
 
-  // Ref to track the long-press timer
-  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
   // --- MODAL STATES ---
   const [isAddProductOpen, setIsAddProductOpen] = useState(false)
   const [isEditProductOpen, setIsEditProductOpen] = useState(false)
@@ -71,14 +68,6 @@ export default function ManageMenuPage() {
   }
   const toggleAllCategories = (checked: boolean) => {
     setSelectedCategoryNames(checked ? categories : [])
-  }
-
-  // Long Press Handlers
-  const cancelPressTimer = () => {
-    if (pressTimer.current) {
-      clearTimeout(pressTimer.current)
-      pressTimer.current = null
-    }
   }
 
   // --- BULK ACTION HANDLERS ---
@@ -269,8 +258,8 @@ export default function ManageMenuPage() {
                   <Table>
                     <TableHeader className="bg-[#E8DFD3]">
                       <TableRow className="hover:bg-transparent border-b border-[#D4C9BB]">
-                        {/* Hidden completely on desktop (md:hidden) */}
-                        <TableHead className={`w-[40px] text-center transition-all md:hidden ${selectedProductIds.length > 0 ? "table-cell" : "hidden"}`}>
+                        {/* Always visible on mobile (md:hidden) */}
+                        <TableHead className="w-[40px] text-center md:hidden">
                           <input 
                             type="checkbox" 
                             className="accent-primary h-4 w-4 rounded cursor-pointer"
@@ -296,24 +285,12 @@ export default function ManageMenuPage() {
                           <TableRow 
                             key={product.id} 
                             className={`group transition-colors border-b border-[#DDD5C8]/50 last:border-0 cursor-pointer md:cursor-default hover:bg-[#E2D9CC]/30 ${selectedProductIds.includes(product.id) ? "bg-[#E2D9CC]/50" : ""}`}
-                            
-                            onTouchStart={() => {
-                              if (selectedProductIds.length === 0) {
-                                pressTimer.current = setTimeout(() => {
-                                  toggleProduct(product.id)
-                                  if (window.navigator?.vibrate) window.navigator.vibrate(50)
-                                }, 450)
-                              }
-                            }}
-                            onTouchEnd={cancelPressTimer}
-                            onTouchMove={cancelPressTimer}
-                            
                             onClick={() => {
                               if (selectedProductIds.length > 0) toggleProduct(product.id)
                             }}
                           >
-                            {/* Hidden completely on desktop (md:hidden) */}
-                            <TableCell className={`text-center transition-all md:hidden ${selectedProductIds.length > 0 ? "table-cell" : "hidden"}`}>
+                            {/* Always visible on mobile (md:hidden) */}
+                            <TableCell className="text-center md:hidden">
                               <input 
                                 type="checkbox" 
                                 className="accent-primary h-4 w-4 rounded cursor-pointer"
@@ -376,8 +353,8 @@ export default function ManageMenuPage() {
                   <Table>
                     <TableHeader className="bg-[#E8DFD3]">
                       <TableRow className="hover:bg-transparent border-b border-[#D4C9BB]">
-                        {/* Hidden completely on desktop (md:hidden) */}
-                        <TableHead className={`w-[40px] text-center transition-all md:hidden ${selectedCategoryNames.length > 0 ? "table-cell" : "hidden"}`}>
+                        {/* Always visible on mobile (md:hidden) */}
+                        <TableHead className="w-[40px] text-center md:hidden">
                           <input 
                             type="checkbox" 
                             className="accent-primary h-4 w-4 rounded cursor-pointer"
@@ -397,24 +374,12 @@ export default function ManageMenuPage() {
                           <TableRow 
                             key={category} 
                             className={`group transition-colors border-b border-[#DDD5C8]/50 last:border-0 cursor-pointer md:cursor-default hover:bg-[#E2D9CC]/30 ${selectedCategoryNames.includes(category) ? "bg-[#E2D9CC]/50" : ""}`}
-                            
-                            onTouchStart={() => {
-                              if (selectedCategoryNames.length === 0) {
-                                pressTimer.current = setTimeout(() => {
-                                  toggleCategory(category)
-                                  if (window.navigator?.vibrate) window.navigator.vibrate(50)
-                                }, 450)
-                              }
-                            }}
-                            onTouchEnd={cancelPressTimer}
-                            onTouchMove={cancelPressTimer}
-                            
                             onClick={() => {
                               if (selectedCategoryNames.length > 0) toggleCategory(category)
                             }}
                           >
-                            {/* Hidden completely on desktop (md:hidden) */}
-                            <TableCell className={`text-center transition-all md:hidden ${selectedCategoryNames.length > 0 ? "table-cell" : "hidden"}`}>
+                            {/* Always visible on mobile (md:hidden) */}
+                            <TableCell className="text-center md:hidden">
                               <input 
                                 type="checkbox" 
                                 className="accent-primary h-4 w-4 rounded cursor-pointer"

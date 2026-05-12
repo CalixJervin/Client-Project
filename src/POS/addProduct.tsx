@@ -24,9 +24,9 @@ export function AddProductModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl p-0 overflow-hidden">
-        <DialogHeader className="p-6 pb-0">
-          <DialogTitle>Add New Product</DialogTitle>
+      <DialogContent className="max-w-[480px] w-[calc(100%-32px)] p-0 overflow-hidden bg-[#FAF6F0] border-none rounded-[16px] shadow-[0_20px_60px_rgba(0,0,0,0.15)] max-h-[90vh] flex flex-col">
+        <DialogHeader className="p-5 pb-0 flex flex-row items-center justify-between">
+          <DialogTitle className="text-[#1C1412] text-lg font-bold">Add New Product</DialogTitle>
         </DialogHeader>
         <AddProductWizard 
           ingredients={ingredients}

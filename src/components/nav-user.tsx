@@ -48,11 +48,11 @@ export function NavUser({ onAccountClick }: NavUserProps) {
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium text-white">{user.name}</span>
-                <span className="truncate text-xs text-[#A89080] capitalize">
+                <span className="truncate text-xs text-[#C4A882] capitalize">
                   {user.role}
                 </span>
               </div>
-              <EllipsisVerticalIcon className="ml-auto size-4 text-[#A89080]" />
+              <EllipsisVerticalIcon className="ml-auto size-4 text-[#C4A882]" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent

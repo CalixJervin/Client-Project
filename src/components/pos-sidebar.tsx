@@ -49,11 +49,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 className={`text-[13px] font-medium transition-all ${
                   location.pathname === "/" 
                     ? "bg-white/8 text-white border-l-[3px] border-[#D4A574] rounded-none!" 
-                    : "text-[#A89080] hover:text-white hover:bg-white/5"
+                    : "text-[#C4A882] hover:text-white hover:bg-white/5"
                 }`}
               >
                 <Link to="/" onClick={() => setOpenMobile(false)}>
-                  <ShoppingCart className={`size-4 ${location.pathname === "/" ? "text-white" : "text-[#A89080]"}`} />
+                  <ShoppingCart className={`size-4 ${location.pathname === "/" ? "text-white" : "text-[#C4A882]"}`} />
                   <span>POS</span>
                 </Link>
               </SidebarMenuButton>
@@ -68,11 +68,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   className={`text-[13px] font-medium transition-all ${
                     location.pathname === "/dashboard" 
                       ? "bg-white/8 text-white border-l-[3px] border-[#D4A574] rounded-none!" 
-                      : "text-[#A89080] hover:text-white hover:bg-white/5"
+                      : "text-[#C4A882] hover:text-white hover:bg-white/5"
                   }`}
                 >
                   <Link to="/dashboard" onClick={() => setOpenMobile(false)}>
-                    <LayoutDashboard className={`size-4 ${location.pathname === "/dashboard" ? "text-white" : "text-[#A89080]"}`} />
+                    <LayoutDashboard className={`size-4 ${location.pathname === "/dashboard" ? "text-white" : "text-[#C4A882]"}`} />
                     <span>Dashboard</span>
                   </Link>
                 </SidebarMenuButton>
@@ -88,11 +88,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   className={`text-[13px] font-medium transition-all ${
                     location.pathname === "/inventory" 
                       ? "bg-white/8 text-white border-l-[3px] border-[#D4A574] rounded-none!" 
-                      : "text-[#A89080] hover:text-white hover:bg-white/5"
+                      : "text-[#C4A882] hover:text-white hover:bg-white/5"
                   }`}
                 >
                   <Link to="/inventory" onClick={() => setOpenMobile(false)}>
-                    <Package className={`size-4 ${location.pathname === "/inventory" ? "text-white" : "text-[#A89080]"}`} />
+                    <Package className={`size-4 ${location.pathname === "/inventory" ? "text-white" : "text-[#C4A882]"}`} />
                     <span>Inventory</span>
                   </Link>
                 </SidebarMenuButton>
@@ -108,11 +108,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   className={`text-[13px] font-medium transition-all ${
                     location.pathname === "/menuManagement" 
                       ? "bg-white/8 text-white border-l-[3px] border-[#D4A574] rounded-none!" 
-                      : "text-[#A89080] hover:text-white hover:bg-white/5"
+                      : "text-[#C4A882] hover:text-white hover:bg-white/5"
                   }`}
                 >
                   <Link to="/menuManagement" onClick={() => setOpenMobile(false)}>
-                    <Settings className={`size-4 ${location.pathname === "/menuManagement" ? "text-white" : "text-[#A89080]"}`} />
+                    <Settings className={`size-4 ${location.pathname === "/menuManagement" ? "text-white" : "text-[#C4A882]"}`} />
                     <span>Edit Menu</span>
                   </Link>
                 </SidebarMenuButton>

@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom"
 import { Delete, ArrowLeft, ShieldAlert, Coffee, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Toaster, toast } from "sonner"
+import { toast } from "sonner"
+import { Toaster } from "@/components/ui/sonner"
 import { motion, AnimatePresence } from "framer-motion"
 import { useAuth } from "@/hooks/use-auth"
 import type { Staff } from "@/hooks/use-auth"
@@ -26,6 +27,16 @@ export default function LoginPage() {
   const [pin, setPin] = useState("")
   const [isVerifying, setIsVerifying] = useState(false)
   const [isOnboarding, setIsOnboarding] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   // Onboarding State
   const [adminName, setAdminName] = useState("")
@@ -291,7 +302,11 @@ export default function LoginPage() {
           </AnimatePresence>
         </div>
       </div>
-      <Toaster richColors />
+      <Toaster 
+        richColors 
+        position={isMobile ? "bottom-center" : "top-right"} 
+        expand={false}
+      />
     </div>
   )
 }
